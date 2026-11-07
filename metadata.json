@@ -1,0 +1,6 @@
+{
+  "name": "Celebes Event - Event & Ticketing Management System",
+  "description": "Platform resmi manajemen event dan tiket online Celebes Event berbasis Node.js & MySQL siap hosting untuk Super Admin, Kreator Event, dan Peserta di Sulawesi dan seluruh Indonesia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

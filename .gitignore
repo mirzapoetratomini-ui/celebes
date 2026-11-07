@@ -1,0 +1,10 @@
+node_modules/
+build/
+# dist/ diaktifkan agar folder hasil build frontend otomatis ter-push ke GitHub & ter-pull di cPanel
+# dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+

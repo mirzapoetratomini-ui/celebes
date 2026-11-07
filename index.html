@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Celebes Event - Event & Ticketing Management System</title>
+    <meta name="description" content="Platform resmi manajemen event dan tiket online Celebes Event berbasis Node.js & MySQL siap hosting untuk Super Admin, Kreator Event, dan Peserta di Sulawesi dan seluruh Indonesia." />
+    <meta property="og:title" content="Celebes Event - Event & Ticketing Management System" />
+    <meta property="og:description" content="Platform resmi manajemen event dan tiket online Celebes Event berbasis Node.js & MySQL siap hosting untuk Super Admin, Kreator Event, dan Peserta di Sulawesi dan seluruh Indonesia." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f172a; text-align: center; padding: 20px;">
+        <div style="width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px;"></div>
+        <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700;">Memuat Celebes Event...</h3>
+        <p style="margin: 0; font-size: 13px; color: #64748b;">Menyiapkan platform tiket dan event digital Sulawesi</p>
+        <div id="loading-timeout-msg" style="display: none; margin-top: 20px; max-width: 420px; font-size: 13px; color: #b91c1c; background: #fff1f2; border: 1px solid #fecdd3; padding: 14px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <p style="margin: 0 0 6px 0; font-weight: 700; color: #9f1239;">Memuat berlangsung cukup lama...</p>
+          <p style="margin: 0 0 10px 0; color: #475569; font-size: 12px; line-height: 1.5;">Pastikan folder <code>dist/assets</code> sudah lengkap di hosting cPanel, atau coba lakukan Hard Refresh browser.</p>
+          <button onclick="window.location.reload(true)" style="background: #2563eb; color: #fff; border: none; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Muat Ulang Halaman (Ctrl + F5)</button>
+        </div>
+        <script>
+          setTimeout(function() {
+            var el = document.getElementById('loading-timeout-msg');
+            if (el) el.style.display = 'block';
+          }, 3500);
+        </script>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
