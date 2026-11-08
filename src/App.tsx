@@ -31,7 +31,16 @@ import {
   ChevronUp,
   Check,
   Layers,
-  FileText
+  FileText,
+  Music,
+  GraduationCap,
+  Utensils,
+  Flame,
+  Video,
+  Filter,
+  UserCheck,
+  Quote,
+  Camera
 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { EventCard } from './components/EventCard';
@@ -181,6 +190,25 @@ export default function App() {
     'Webinar Online'
   ];
 
+  const getCategoryIcon = (catName: string) => {
+    switch (catName) {
+      case 'Konser Musik':
+        return <Music className="w-3.5 h-3.5" />;
+      case 'Seminar & Workshop':
+        return <GraduationCap className="w-3.5 h-3.5" />;
+      case 'Festival Budaya & Kuliner':
+        return <Utensils className="w-3.5 h-3.5" />;
+      case 'Olahraga & Fun Run':
+        return <Flame className="w-3.5 h-3.5" />;
+      case 'Pameran & Expo':
+        return <Sparkles className="w-3.5 h-3.5" />;
+      case 'Webinar Online':
+        return <Video className="w-3.5 h-3.5" />;
+      default:
+        return <Layers className="w-3.5 h-3.5" />;
+    }
+  };
+
   // Filtered Events
   const filteredEvents = events.filter(e => {
     const matchesCategory = selectedCategory === 'Semua' || e.category.toLowerCase().includes(selectedCategory.toLowerCase());
@@ -300,35 +328,75 @@ export default function App() {
             </div>
 
             {/* Category Navigation Bar (Pills inspired by GoEvent.id) */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 text-xs font-semibold">
-                <span className="text-slate-400 font-bold px-1 hidden lg:inline">Kategori:</span>
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-xl transition-all shrink-0 cursor-pointer ${
-                      selectedCategory === cat
-                        ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+            {/* Category Navigation Bar (Pills inspired by GoEvent.id) */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 lg:pb-0 text-xs font-semibold scrollbar-none">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider px-1 hidden sm:flex shrink-0">
+                  <Filter className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Kategori:</span>
+                </div>
+                {categories.map((cat) => {
+                  const count = events.filter(
+                    e => e.status === 'published' && (cat === 'Semua' || e.category.toLowerCase().includes(cat.toLowerCase()))
+                  ).length;
+                  const isActive = selectedCategory === cat;
+
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`group flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-200 shrink-0 cursor-pointer select-none text-xs ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20 scale-[1.02]'
+                          : 'bg-slate-100/90 text-slate-700 hover:text-blue-700 hover:bg-blue-50/70 border border-transparent hover:border-blue-200 font-medium'
+                      }`}
+                    >
+                      <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-600 transition-colors'}`}>
+                        {getCategoryIcon(cat)}
+                      </span>
+                      <span>{cat}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200/70 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="flex items-center gap-2 shrink-0 text-xs">
-                <span className="text-slate-500 font-medium">Lokasi:</span>
-                <select
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value as any)}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-semibold text-slate-700"
-                >
-                  <option value="all">Semua Format</option>
-                  <option value="venue">Tatap Muka (Venue)</option>
-                  <option value="online">Live Streaming Online</option>
-                </select>
+              <div className="flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100 justify-between sm:justify-end">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:border-blue-400 transition-colors rounded-xl px-3 py-1.5 shadow-2xs">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="text-xs text-slate-400 font-medium hidden sm:inline">Format:</span>
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value as any)}
+                    aria-label="Filter Format Event"
+                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="all">Semua Format Event</option>
+                    <option value="venue">📍 Tatap Muka (Venue)</option>
+                    <option value="online">💻 Live Streaming Online</option>
+                  </select>
+                </div>
+
+                {(selectedCategory !== 'Semua' || locationFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('Semua');
+                      setLocationFilter('all');
+                    }}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline px-2 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Reset Filter Kategori & Lokasi"
+                  >
+                    Reset Filter
+                  </button>
+                )}
               </div>
             </div>
 
@@ -363,7 +431,7 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-100/80 p-4 sm:p-6 rounded-3xl border border-slate-200/80">
                   {filteredEvents.map((event) => (
                     <EventCard
                       key={event.id}
@@ -377,7 +445,7 @@ export default function App() {
             </div>
 
             {/* SECTION 2: Langkah Mudah Dapatkan Tiket (GoEvent Inspired) */}
-            <div className="space-y-6">
+            <div className="space-y-6 bg-gradient-to-b from-blue-50/70 to-indigo-50/40 p-6 sm:p-10 rounded-3xl border border-blue-100/80 shadow-xs">
               <div className="text-center max-w-2xl mx-auto space-y-2">
                 <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
                   Panduan Pemesanan
@@ -427,7 +495,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-100/80 p-4 sm:p-6 rounded-3xl border border-slate-200/80">
                 {(platformSettings.servicePackages || DEFAULT_PLATFORM_SETTINGS.servicePackages).map((pkg, idx) => {
                   const isPopular = !!pkg.badge;
                   return (
@@ -570,6 +638,69 @@ export default function App() {
                   ))}
                 </div>
               )}
+
+              {/* Seksi Profil & Foto Founder Resmi */}
+              <div className="pt-6 border-t border-slate-100">
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-xl border border-slate-700/50">
+                  {/* Decorative ambient background */}
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-600/15 rounded-full blur-2xl pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
+                    {/* Founder Photo Container */}
+                    <div className="relative shrink-0 group">
+                      <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl overflow-hidden ring-4 ring-blue-500/40 shadow-2xl bg-slate-800">
+                        <img
+                          src={platformSettings.aboutUs?.founderPhotoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80'}
+                          alt={platformSettings.aboutUs?.founderName || 'Founder Celebes Event'}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-1.5 rounded-xl shadow-lg ring-2 ring-slate-900 flex items-center justify-center">
+                        <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                      </div>
+                    </div>
+
+                    {/* Founder Info & Statement */}
+                    <div className="flex-1 text-center md:text-left space-y-3">
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                          Pendiri & Pimpinan Resmi
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                          {platformSettings.aboutUs?.founderName || 'Mirza Poetra Tomini'}
+                        </h4>
+                        <p className="text-xs sm:text-sm font-semibold text-blue-300 mt-0.5">
+                          {platformSettings.aboutUs?.founderRole || 'Founder & Chief Executive Officer (CEO)'}
+                        </p>
+                      </div>
+
+                      <div className="relative bg-white/5 backdrop-blur-xs rounded-2xl p-4 border border-white/10 text-xs sm:text-sm text-slate-300 leading-relaxed italic">
+                        <Quote className="w-5 h-5 text-blue-400/60 inline mr-1.5 -mt-1" />
+                        <span>
+                          {platformSettings.aboutUs?.founderBio || 'Mendedikasikan inovasi teknologi digital untuk memberdayakan industri kreatif, musisi pesisir pantai, dan promotor event di seluruh Sulawesi dan Indonesia.'}
+                        </span>
+                      </div>
+
+                      {/* Quick Admin Action if logged in as Admin */}
+                      {currentUser?.role === 'admin' && (
+                        <div className="pt-2 flex items-center justify-center md:justify-start gap-3">
+                          <button
+                            onClick={() => setActiveTab('admin-portal')}
+                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Ganti Foto & Nama Founder di Admin Portal</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* SECTION 5: Galeri Dokumentasi Kegiatan Event */}

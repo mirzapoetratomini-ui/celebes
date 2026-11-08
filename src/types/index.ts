@@ -238,6 +238,10 @@ export interface AboutUsContent {
   story: string;
   vision: string;
   mission: string;
+  founderName?: string;
+  founderRole?: string;
+  founderBio?: string;
+  founderPhotoUrl?: string;
   highlights?: { label: string; value: string }[];
   metrics?: { label: string; value: string }[];
 }

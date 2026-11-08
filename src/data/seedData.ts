@@ -588,6 +588,10 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
     story: 'Celebes Event dibangun untuk memajukan industri kreatif, seni pertunjukan musik, pariwisata bahari, festival budaya lokal, dan konferensi bisnis di tanah Sulawesi serta Indonesia Timur. Kami menghadirkan integrasi pembayaran resmi (QRIS & Virtual Account), proteksi tiket digital anti-pemalsuan dengan QR kriptografis, dan solusi gerbang check-in kamera smartphone yang cepat tanpa antrean panjang.',
     vision: 'Menjadi ekosistem ticketing dan promosi event digital nomor satu di Sulawesi yang terpercaya, transparan, dan inklusif bagi seluruh penyelenggara.',
     mission: 'Menghadirkan teknologi tiket yang mudah diakses siapa saja, melindungi penikmat event dari calo tiket palsu, dan membantu kreator mengembangkan penjualan tiket dengan pencairan dana yang terjamin.',
+    founderName: 'Mirza Poetra Tomini',
+    founderRole: 'Founder & Chief Executive Officer (CEO)',
+    founderBio: 'Mendedikasikan inovasi teknologi digital untuk memberdayakan industri kreatif, musisi pesisir pantai, dan promotor event di seluruh Sulawesi dan Indonesia.',
+    founderPhotoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
     highlights: [
       { label: 'Event Terselenggara', value: '1,200+' },
       { label: 'Tiket Terdistribusi', value: '450,000+' },

@@ -46,7 +46,9 @@ import {
   Wallet,
   CreditCard,
   Printer,
-  ArrowRight
+  ArrowRight,
+  UserCheck,
+  Camera
 } from 'lucide-react';
 import { EventItem, Order, PayoutRequest, User, DatabaseStatus, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, ManualBankAccount } from '../types';
 import { DEFAULT_PLATFORM_SETTINGS } from '../data/seedData';
@@ -3718,6 +3720,154 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     }
                     className="w-full p-2.5 rounded-xl border border-slate-300 text-slate-900"
                   />
+                </div>
+
+                {/* SUB-SEKSI: PROFIL FOUNDER & PEMIMPIN PLATFORM */}
+                <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">Profil & Foto Founder (Tampil di Beranda)</h4>
+                          <p className="text-[11px] text-slate-500">Unggah foto resmi, nama, jabatan, dan pernyataan visi founder platform</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        Official Founder Card
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-5 pt-2">
+                      {/* Photo Preview & Upload Controls */}
+                      <div className="flex flex-col items-center gap-2 shrink-0">
+                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-4 ring-blue-500/20 shadow-md bg-white">
+                          <img
+                            src={settingsForm.aboutUs?.founderPhotoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80'}
+                            alt="Foto Founder"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold cursor-pointer transition-colors shadow-xs">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert('Ukuran foto terlalu besar. Maksimal 5MB.');
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  if (typeof reader.result === 'string') {
+                                    setSettingsForm(prev => ({
+                                      ...prev,
+                                      aboutUs: {
+                                        ...(prev.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs),
+                                        founderPhotoUrl: reader.result as string,
+                                      },
+                                    }));
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                        {settingsForm.aboutUs?.founderPhotoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSettingsForm(prev => ({
+                                ...prev,
+                                aboutUs: {
+                                  ...(prev.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs),
+                                  founderPhotoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+                                },
+                              }));
+                            }}
+                            className="text-[10px] text-slate-500 hover:text-rose-600 font-semibold cursor-pointer"
+                          >
+                            Reset Foto Standar
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Founder Info Fields */}
+                      <div className="flex-1 w-full space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-bold text-slate-700 mb-1 text-[11px]">Nama Lengkap Founder *</label>
+                            <input
+                              type="text"
+                              value={settingsForm.aboutUs?.founderName || ''}
+                              onChange={(e) =>
+                                setSettingsForm({
+                                  ...settingsForm,
+                                  aboutUs: { ...(settingsForm.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs), founderName: e.target.value },
+                                })
+                              }
+                              placeholder="Contoh: Mirza Poetra Tomini"
+                              className="w-full p-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-bold text-slate-700 mb-1 text-[11px]">Jabatan / Gelar Founder *</label>
+                            <input
+                              type="text"
+                              value={settingsForm.aboutUs?.founderRole || ''}
+                              onChange={(e) =>
+                                setSettingsForm({
+                                  ...settingsForm,
+                                  aboutUs: { ...(settingsForm.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs), founderRole: e.target.value },
+                                })
+                              }
+                              placeholder="Contoh: Founder & Chief Executive Officer (CEO)"
+                              className="w-full p-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1 text-[11px]">Kutipan / Visi Pendiri (Quote) *</label>
+                          <textarea
+                            rows={2}
+                            value={settingsForm.aboutUs?.founderBio || ''}
+                            onChange={(e) =>
+                              setSettingsForm({
+                                ...settingsForm,
+                                aboutUs: { ...(settingsForm.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs), founderBio: e.target.value },
+                              })
+                            }
+                            placeholder="Pesan, visi, atau komitmen pendiri bagi penyelenggara event dan pembeli tiket..."
+                            className="w-full p-2 rounded-xl border border-slate-300 text-slate-900 bg-white leading-relaxed"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-500 mb-1 text-[10px]">Atau Tautan URL Gambar Langsung:</label>
+                          <input
+                            type="text"
+                            value={settingsForm.aboutUs?.founderPhotoUrl || ''}
+                            onChange={(e) =>
+                              setSettingsForm({
+                                ...settingsForm,
+                                aboutUs: { ...(settingsForm.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs), founderPhotoUrl: e.target.value },
+                              })
+                            }
+                            placeholder="https://... (URL foto founder)"
+                            className="w-full p-1.5 text-[11px] rounded-lg border border-slate-200 text-slate-700 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

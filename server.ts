@@ -666,6 +666,12 @@ async function getSettingsFromDb(): Promise<PlatformSettings> {
           else if (r.setting_key === 'manual_bank_accounts') {
             try { settingsObj.manualBankAccounts = JSON.parse(r.setting_value); } catch {}
           }
+          else if (r.setting_key === 'about_us') {
+            try { settingsObj.aboutUs = { ...DEFAULT_PLATFORM_SETTINGS.aboutUs, ...JSON.parse(r.setting_value) }; } catch {}
+          }
+        }
+        if (!settingsObj.aboutUs) {
+          settingsObj.aboutUs = memorySettings.aboutUs || DEFAULT_PLATFORM_SETTINGS.aboutUs;
         }
         if (!settingsObj.manualBankAccounts || settingsObj.manualBankAccounts.length === 0) {
           settingsObj.manualBankAccounts = memorySettings.manualBankAccounts || DEFAULT_PLATFORM_SETTINGS.manualBankAccounts;
@@ -2540,6 +2546,13 @@ app.put('/api/settings', async (req: Request, res: Response) => {
         await mysqlPool.execute(
           `INSERT INTO system_settings (setting_key, setting_value) VALUES ('manual_bank_accounts', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
           [JSON.stringify(newSettings.manualBankAccounts)]
+        );
+      }
+
+      if (newSettings.aboutUs && typeof newSettings.aboutUs === 'object') {
+        await mysqlPool.execute(
+          `INSERT INTO system_settings (setting_key, setting_value) VALUES ('about_us', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+          [JSON.stringify(newSettings.aboutUs)]
         );
       }
     } catch (err: any) {
