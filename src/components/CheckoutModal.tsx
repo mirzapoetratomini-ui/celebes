@@ -100,13 +100,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       if (activeOnly.length > 0) return activeOnly;
     }
     return [
-      { id: 'bca', bankName: 'Bank BCA', bankCode: 'BCA', accountNumber: '888-019-2831', accountName: 'PT CELEBES EVENT DIGITAL', isActive: true },
-      { id: 'mandiri', bankName: 'Bank Mandiri', bankCode: 'MANDIRI', accountNumber: '137-00-19283-912', accountName: 'CELEBES EVENT INDONESIA', isActive: true },
-      { id: 'bsi', bankName: 'Bank BSI (Syariah)', bankCode: 'BSI', accountNumber: '719-283-0012', accountName: 'CELEBES EVENT SYARIAH', isActive: true },
+      { id: 'bank-bca', bankName: 'Bank BCA', bankCode: 'BCA', accountNumber: '888-019-2831', accountName: 'PT CELEBES EVENT DIGITAL', isActive: true, notes: 'Verifikasi via m-BCA, myBCA, KlikBCA, atau ATM BCA' },
+      { id: 'bank-mandiri', bankName: 'Bank Mandiri', bankCode: 'MANDIRI', accountNumber: '137-00-19283-912', accountName: 'CELEBES EVENT INDONESIA', isActive: true, notes: 'Transfer via Livin by Mandiri atau ATM Mandiri' },
+      { id: 'bank-bsi', bankName: 'Bank BSI (Syariah)', bankCode: 'BSI', accountNumber: '719-283-0012', accountName: 'CELEBES EVENT SYARIAH', isActive: true, notes: 'Transfer syariah via BSI Mobile atau ATM Bersama' },
     ];
   }, [platformSettings?.manualBankAccounts]);
 
-  const [selectedBankId, setSelectedBankId] = useState<string>('bca');
+  const [selectedBankId, setSelectedBankId] = useState<string>('bank-bca');
 
   React.useEffect(() => {
     if (activeBankAccounts.length > 0 && !activeBankAccounts.some(b => b.id === selectedBankId)) {
@@ -115,7 +115,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   }, [activeBankAccounts, selectedBankId]);
 
   const selectedBankAccount = activeBankAccounts.find(b => b.id === selectedBankId) || activeBankAccounts[0] || {
-    id: 'bca',
+    id: 'bank-bca',
     bankName: 'Bank BCA',
     bankCode: 'BCA',
     accountNumber: '888-019-2831',

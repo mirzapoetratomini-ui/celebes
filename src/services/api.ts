@@ -133,6 +133,17 @@ export const api = {
     return data;
   },
 
+  async createAdminManualOrder(orderData: any): Promise<{ success: boolean; order: Order; message: string }> {
+    const res = await fetch('/api/admin/manual-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Gagal membuat transaksi manual oleh Super Admin');
+    return data;
+  },
+
   // Midtrans Payment Gateway API
   async testMidtransConnection(payload: { serverKey?: string; isSandbox?: boolean }): Promise<{ success: boolean; message: string; environment?: string; details?: any }> {
     const res = await fetch('/api/midtrans/test-connection', {

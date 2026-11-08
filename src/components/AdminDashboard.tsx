@@ -39,7 +39,14 @@ import {
   Trash2,
   FileText,
   Newspaper,
-  Building2
+  Building2,
+  Edit3,
+  RotateCcw,
+  Receipt,
+  Wallet,
+  CreditCard,
+  Printer,
+  ArrowRight
 } from 'lucide-react';
 import { EventItem, Order, PayoutRequest, User, DatabaseStatus, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, ManualBankAccount } from '../types';
 import { DEFAULT_PLATFORM_SETTINGS } from '../data/seedData';
@@ -89,8 +96,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adminReplyStatus, setAdminReplyStatus] = useState<'in_progress' | 'resolved'>('resolved');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
-  // Manual payment state for Super Admin (Blueprint v3: Approval & Master Data Rekening)
-  const [adminManualSubTab, setAdminManualSubTab] = useState<'approvals' | 'accounts'>('approvals');
+  // Manual payment state for Super Admin (Blueprint v3: Approval, Master Data Rekening, & Layanan Input Manual)
+  const [adminManualSubTab, setAdminManualSubTab] = useState<'approvals' | 'accounts' | 'input-manual'>('approvals');
   const adminManualOrders = orders.filter(o => o.paymentType === 'manual' || o.paymentMethod === 'bank_transfer_manual');
   const adminPendingCount = adminManualOrders.filter(o => o.paymentStatus === 'pending_manual_verification').length;
   const [adminManualFilter, setAdminManualFilter] = useState<'all' | 'pending' | 'paid' | 'rejected'>('all');
@@ -101,6 +108,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Master Data Rekening State
   const [isAddingBank, setIsAddingBank] = useState(false);
+  const [editingBankId, setEditingBankId] = useState<string | null>(null);
   const [newBankName, setNewBankName] = useState('');
   const [newBankCode, setNewBankCode] = useState('');
   const [newAccountNumber, setNewAccountNumber] = useState('');
@@ -127,28 +135,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleAddBankAccount = async (e: React.FormEvent) => {
+  const handleAddOrEditBankAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBankName.trim() || !newAccountNumber.trim() || !newAccountName.trim()) {
       alert('Nama Bank, Nomor Rekening, dan Atas Nama wajib diisi.');
       return;
     }
-    const newAccount: ManualBankAccount = {
-      id: `bank-${Date.now()}`,
-      bankName: newBankName.trim(),
-      bankCode: newBankCode.trim().toUpperCase() || 'BANK',
-      accountNumber: newAccountNumber.trim(),
-      accountName: newAccountName.trim(),
-      notes: newNotes.trim() || undefined,
-      isActive: true,
-    };
-    await handleSaveBankAccounts([...currentBankAccounts, newAccount]);
+    if (editingBankId) {
+      const updated = currentBankAccounts.map(b => {
+        if (b.id === editingBankId) {
+          return {
+            ...b,
+            bankName: newBankName.trim(),
+            bankCode: newBankCode.trim().toUpperCase() || 'BANK',
+            accountNumber: newAccountNumber.trim(),
+            accountName: newAccountName.trim(),
+            notes: newNotes.trim() || undefined,
+          };
+        }
+        return b;
+      });
+      await handleSaveBankAccounts(updated);
+    } else {
+      const newAccount: ManualBankAccount = {
+        id: `bank-${Date.now()}`,
+        bankName: newBankName.trim(),
+        bankCode: newBankCode.trim().toUpperCase() || 'BANK',
+        accountNumber: newAccountNumber.trim(),
+        accountName: newAccountName.trim(),
+        notes: newNotes.trim() || undefined,
+        isActive: true,
+      };
+      await handleSaveBankAccounts([...currentBankAccounts, newAccount]);
+    }
+    handleCancelBankForm();
+  };
+
+  const handleStartEditBank = (account: ManualBankAccount) => {
+    setEditingBankId(account.id);
+    setNewBankName(account.bankName);
+    setNewBankCode(account.bankCode);
+    setNewAccountNumber(account.accountNumber);
+    setNewAccountName(account.accountName);
+    setNewNotes(account.notes || '');
+    setIsAddingBank(true);
+  };
+
+  const handleCancelBankForm = () => {
+    setIsAddingBank(false);
+    setEditingBankId(null);
     setNewBankName('');
     setNewBankCode('');
     setNewAccountNumber('');
     setNewAccountName('');
     setNewNotes('');
-    setIsAddingBank(false);
   };
 
   const handleToggleBankAccountActive = async (id: string) => {
@@ -160,6 +200,132 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirm('Hapus rekening bank ini dari master data platform?')) return;
     const updated = currentBankAccounts.filter(b => b.id !== id);
     await handleSaveBankAccounts(updated);
+  };
+
+  const handleResetDefaultBankAccounts = async () => {
+    if (!confirm('Kembalikan master data ke 3 Rekening Aktif Resmi (Bank BCA 888-019-2831, Bank Mandiri 137-00-19283-912, Bank BSI Syariah 719-283-0012)?')) return;
+    const defaultAccounts: ManualBankAccount[] = [
+      {
+        id: 'bank-bca',
+        bankName: 'Bank BCA',
+        bankCode: 'bca',
+        accountNumber: '888-019-2831',
+        accountName: 'PT CELEBES EVENT DIGITAL',
+        isActive: true,
+        notes: 'Verifikasi via m-BCA, myBCA, KlikBCA, atau ATM BCA',
+      },
+      {
+        id: 'bank-mandiri',
+        bankName: 'Bank Mandiri',
+        bankCode: 'mandiri',
+        accountNumber: '137-00-19283-912',
+        accountName: 'CELEBES EVENT INDONESIA',
+        isActive: true,
+        notes: 'Transfer via Livin by Mandiri atau ATM Mandiri',
+      },
+      {
+        id: 'bank-bsi',
+        bankName: 'Bank BSI (Syariah)',
+        bankCode: 'bsi',
+        accountNumber: '719-283-0012',
+        accountName: 'CELEBES EVENT SYARIAH',
+        isActive: true,
+        notes: 'Transfer syariah via BSI Mobile atau ATM Bersama',
+      },
+    ];
+    await handleSaveBankAccounts(defaultAccounts);
+  };
+
+  // Layanan Super Admin Input Transaksi & Tiket Manual State
+  const [manualEventId, setManualEventId] = useState<string>('');
+  const [manualTierId, setManualTierId] = useState<string>('');
+  const [manualQuantity, setManualQuantity] = useState<number>(1);
+  const [manualBuyerName, setManualBuyerName] = useState('');
+  const [manualBuyerEmail, setManualBuyerEmail] = useState('');
+  const [manualBuyerPhone, setManualBuyerPhone] = useState('');
+  const [manualPaymentMethod, setManualPaymentMethod] = useState<'transfer_manual' | 'cash_loket' | 'qris_manual'>('transfer_manual');
+  const [manualSelectedBankId, setManualSelectedBankId] = useState<string>('bank-bca');
+  const [manualSenderBank, setManualSenderBank] = useState('Bank BCA');
+  const [manualSenderAccountName, setManualSenderAccountName] = useState('');
+  const [manualPaymentRef, setManualPaymentRef] = useState('');
+  const [manualTransferNotes, setManualTransferNotes] = useState('');
+  const [manualIsImmediatePaid, setManualIsImmediatePaid] = useState<boolean>(true);
+  const [isSubmittingManualOrder, setIsSubmittingManualOrder] = useState<boolean>(false);
+  const [manualOrderCreatedResult, setManualOrderCreatedResult] = useState<Order | null>(null);
+
+  useEffect(() => {
+    if (events.length > 0 && !manualEventId) {
+      setManualEventId(events[0].id);
+      if (events[0].tickets && events[0].tickets.length > 0) {
+        setManualTierId(events[0].tickets[0].id);
+      }
+    }
+  }, [events, manualEventId]);
+
+  useEffect(() => {
+    const selEvent = events.find(e => e.id === manualEventId);
+    if (selEvent && selEvent.tickets && selEvent.tickets.length > 0) {
+      if (!selEvent.tickets.some(t => t.id === manualTierId)) {
+        setManualTierId(selEvent.tickets[0].id);
+      }
+    }
+  }, [manualEventId, events, manualTierId]);
+
+  const handleSubmitManualOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualEventId || !manualTierId || !manualBuyerName.trim() || !manualBuyerEmail.trim()) {
+      alert('Event, kategori tiket, nama pendaftar, dan email wajib diisi!');
+      return;
+    }
+
+    const selEvent = events.find(e => e.id === manualEventId);
+    const selTier = selEvent?.tickets.find(t => t.id === manualTierId);
+    if (!selEvent || !selTier) {
+      alert('Event atau kategori tiket tidak valid.');
+      return;
+    }
+
+    const selBank = currentBankAccounts.find(b => b.id === manualSelectedBankId) || currentBankAccounts[0];
+    let channelLabel = 'Transfer Bank Manual';
+    if (manualPaymentMethod === 'cash_loket') {
+      channelLabel = 'Tunai / Cash di Loket (On The Spot)';
+    } else if (manualPaymentMethod === 'qris_manual') {
+      channelLabel = 'QRIS Statis / EDC Loket Kasir';
+    } else if (selBank) {
+      channelLabel = `Transfer ${selBank.bankName} (${selBank.accountNumber})`;
+    }
+
+    setIsSubmittingManualOrder(true);
+    try {
+      const res = await api.createAdminManualOrder({
+        eventId: manualEventId,
+        tierId: manualTierId,
+        quantity: manualQuantity,
+        buyerName: manualBuyerName.trim(),
+        buyerEmail: manualBuyerEmail.trim(),
+        buyerPhone: manualBuyerPhone.trim(),
+        paymentMethod: manualPaymentMethod,
+        paymentChannel: channelLabel,
+        selectedBankId: manualSelectedBankId,
+        senderBank: manualSenderBank,
+        senderAccountName: manualSenderAccountName.trim() || manualBuyerName.trim(),
+        paymentReference: manualPaymentRef.trim() || `LOKET-${Date.now()}`,
+        transferNotes: manualTransferNotes.trim() || `Diinput manual oleh Super Admin (${currentUser.name})`,
+        isPaidImmediate: manualIsImmediatePaid,
+        verifiedBy: currentUser.name || 'Super Admin Pusat',
+      });
+
+      if (res.success && res.order) {
+        setManualOrderCreatedResult(res.order);
+        setAdminActionToast(`Transaksi ${res.order.orderNumber} berhasil disimpan! Status: ${res.order.paymentStatus.toUpperCase()}`);
+        setTimeout(() => setAdminActionToast(null), 4000);
+        onRefreshData();
+      }
+    } catch (err: any) {
+      alert('Gagal mencatat transaksi manual: ' + err.message);
+    } finally {
+      setIsSubmittingManualOrder(false);
+    }
   };
 
   // Creator Approval & Moderation State
@@ -1637,7 +1803,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-6">
           {/* Sub-Navigation for Manual Payments */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setAdminManualSubTab('approvals')}
@@ -1658,6 +1824,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <button
                 type="button"
+                onClick={() => setAdminManualSubTab('input-manual')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  adminManualSubTab === 'input-manual'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Receipt className="w-4 h-4" />
+                <span>Layanan Input Transaksi Manual</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                  Loket / Kasir
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setAdminManualSubTab('accounts')}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
                   adminManualSubTab === 'accounts'
@@ -1666,42 +1848,102 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 }`}
               >
                 <Building2 className="w-4 h-4" />
-                <span>Manajemen Rekening (Master Data)</span>
+                <span>Pilih Rekening Bank Tujuan Transfer (Master Data Resmi)</span>
                 <span className="px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">
-                  {currentBankAccounts.filter(b => b.isActive !== false).length} Aktif
+                  {currentBankAccounts.filter(b => b.isActive !== false).length} Rekening Aktif
                 </span>
               </button>
             </div>
 
-            {adminManualSubTab === 'accounts' && !isAddingBank && (
-              <button
-                type="button"
-                onClick={() => setIsAddingBank(true)}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Rekening Baru</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {adminManualSubTab === 'accounts' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleResetDefaultBankAccounts}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    title="Kembalikan ke 3 rekening resmi default"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="hidden sm:inline">Reset 3 Rekening Resmi</span>
+                  </button>
+                  {!isAddingBank && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCancelBankForm();
+                        setIsAddingBank(true);
+                      }}
+                      className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Input Rekening Baru</span>
+                    </button>
+                  )}
+                </>
+              )}
+
+              {adminManualSubTab !== 'input-manual' && (
+                <button
+                  type="button"
+                  onClick={() => setAdminManualSubTab('input-manual')}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Input Transaksi Kasir</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* SUB-VIEW 1: MASTER DATA REKENING (BLUEPRINT V3 PAGE 5) */}
+          {/* SUB-VIEW 1: MASTER DATA REKENING RESMI (BLUEPRINT V3) */}
           {adminManualSubTab === 'accounts' && (
             <div className="space-y-6">
-              {/* Form Tambah Rekening */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
+                      Master Data Keuangan Resmi
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs font-bold text-emerald-600">
+                      {currentBankAccounts.filter(b => b.isActive !== false).length} Rekening Aktif di Checkout
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-extrabold text-slate-900">
+                    Pilih Rekening Bank Tujuan Transfer (Master Data Resmi)
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Rekening bank resmi Celebes Event yang ditampilkan dinamis kepada peserta saat memilih metode transfer manual di halaman checkout. Super Admin dapat menginput secara manual rekening baru, mengedit, mengaktifkan/menonaktifkan, atau mereset ke 3 Rekening Resmi Default.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetDefaultBankAccounts}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset 3 Rekening Resmi Default</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Form Input / Edit Rekening Bank Secara Manual */}
               {isAddingBank && (
                 <form
-                  onSubmit={handleAddBankAccount}
-                  className="bg-white rounded-2xl border border-purple-200 p-6 shadow-sm space-y-4 animate-in fade-in"
+                  onSubmit={handleAddOrEditBankAccount}
+                  className="bg-white rounded-2xl border border-purple-300 p-6 shadow-md space-y-4 animate-in fade-in"
                 >
                   <div className="flex items-center justify-between border-b pb-3">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-purple-600" />
-                      Tambah Rekening Tujuan Pembayaran Manual
+                      {editingBankId ? 'Edit Rekening Bank Tujuan Transfer' : 'Tambah Rekening Bank Tujuan Transfer (Input Manual Super Admin)'}
                     </h3>
                     <button
                       type="button"
-                      onClick={() => setIsAddingBank(false)}
+                      onClick={handleCancelBankForm}
                       className="text-xs text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                     >
                       Batal
@@ -1716,8 +1958,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         required
                         value={newBankName}
                         onChange={(e) => setNewBankName(e.target.value)}
-                        placeholder="Contoh: Bank BCA / Bank Mandiri / Bank Sulselbar"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                        placeholder="Contoh: Bank BCA / Bank Mandiri / Bank BSI (Syariah)"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1726,8 +1968,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="text"
                         value={newBankCode}
                         onChange={(e) => setNewBankCode(e.target.value)}
-                        placeholder="Contoh: BCA / MANDIRI / SULSELBAR"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase"
+                        placeholder="Contoh: BCA / MANDIRI / BSI"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase focus:ring-2 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1737,8 +1979,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         required
                         value={newAccountNumber}
                         onChange={(e) => setNewAccountNumber(e.target.value)}
-                        placeholder="Contoh: 888-019-2831"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold"
+                        placeholder="Contoh: 888-019-2831 atau 137-00-19283-912"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1749,17 +1991,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={newAccountName}
                         onChange={(e) => setNewAccountName(e.target.value)}
                         placeholder="Contoh: PT CELEBES EVENT DIGITAL"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block font-bold text-slate-700 mb-1">Catatan / Instruksi Pembeli (Opsional)</label>
+                      <label className="block font-bold text-slate-700 mb-1">Catatan Instruksi Pembeli (Opsional)</label>
                       <input
                         type="text"
                         value={newNotes}
                         onChange={(e) => setNewNotes(e.target.value)}
-                        placeholder="Contoh: Gratis biaya transfer antar bank atau sertakan berita transfer nomor order"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                        placeholder="Contoh: Transfer via m-BCA, Livin by Mandiri, BSI Mobile, atau ATM"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1767,8 +2009,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="flex justify-end gap-2 pt-2 border-t">
                     <button
                       type="button"
-                      onClick={() => setIsAddingBank(false)}
-                      className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                      onClick={handleCancelBankForm}
+                      className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-100"
                     >
                       Batal
                     </button>
@@ -1776,7 +2018,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="submit"
                       className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
                     >
-                      Simpan Rekening ke Master Data
+                      {editingBankId ? 'Perbarui Rekening di Master Data' : 'Simpan Rekening Baru ke Master Data'}
                     </button>
                   </div>
                 </form>
@@ -1791,7 +2033,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       key={account.id}
                       className={`p-5 rounded-2xl border transition-all ${
                         isActive
-                          ? 'bg-white border-slate-200 shadow-xs'
+                          ? 'bg-white border-slate-200 shadow-xs ring-1 ring-slate-100'
                           : 'bg-slate-50 border-dashed border-slate-300 opacity-75'
                       }`}
                     >
@@ -1810,6 +2052,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             }`}
                           >
                             {isActive ? '● Aktif di Checkout' : '○ Nonaktif'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditBank(account)}
+                            className="p-1 text-slate-400 hover:text-blue-600 rounded-lg cursor-pointer transition-colors"
+                            title="Edit Rekening"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
@@ -1835,9 +2085,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           type="button"
                           onClick={() => {
                             navigator.clipboard.writeText(account.accountNumber.replace(/-/g, ''));
-                            alert(`Nomor rekening ${account.bankName} berhasil disalin!`);
+                            setAdminActionToast(`Nomor rekening ${account.bankName} (${account.accountNumber}) berhasil disalin!`);
+                            setTimeout(() => setAdminActionToast(null), 3000);
                           }}
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer"
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer transition-colors"
                           title="Salin Nomor"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -1865,10 +2116,420 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div>
                   <strong className="block mb-0.5">Integrasi Master Data Real-Time (Blueprint v3):</strong>
                   <span>
-                    Rekening berstatus <strong>Aktif</strong> otomatis dimuat secara langsung di pilihan bank tujuan pembayaran pembeli pada modal checkout. Pembeli dapat memilih salah satu rekening resmi di atas untuk melakukan transfer manual.
+                    Rekening berstatus <strong>Aktif</strong> otomatis dimuat secara langsung di pilihan bank tujuan pembayaran pembeli pada modal checkout. Saat ini terdapat <strong>3 Rekening Aktif Resmi</strong> default (Bank BCA: 888-019-2831, Bank Mandiri: 137-00-19283-912, dan Bank BSI Syariah: 719-283-0012) yang siap menerima transfer pembeli.
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* SUB-VIEW 2: LAYANAN SUPER ADMIN MENGINPUT PESANAN SECARA MANUAL (LOKET / KASIR) */}
+          {adminManualSubTab === 'input-manual' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                      Layanan Kasir & Loket Khusus
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs font-bold text-slate-600">Manual Entry Form</span>
+                  </div>
+                  <h2 className="text-xl font-extrabold text-slate-900">
+                    Layanan Super Admin Input Transaksi & Pembayaran Manual
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Fasilitas resmi Super Admin untuk menginput transaksi secara manual saat peserta membeli tiket offline di kasir loket, transfer langsung via rekening admin, atau pendaftaran via WhatsApp dengan kalkulasi bagi hasil otomatis (Blueprint v3).
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-3 py-1.5 bg-purple-50 text-purple-700 font-bold rounded-xl border border-purple-200">
+                    Admin Aktif: {currentUser.name}
+                  </span>
+                </div>
+              </div>
+
+              {/* Notification Banner when order is successfully created */}
+              {manualOrderCreatedResult && (
+                <div className="p-5 bg-emerald-50 border-2 border-emerald-500 rounded-2xl shadow-sm text-xs space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>Transaksi Manual Berhasil Diterbitkan!</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setManualOrderCreatedResult(null)}
+                      className="text-slate-400 hover:text-slate-600 font-bold text-xs"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-emerald-200">
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Nomor Order:</span>
+                      <span className="font-mono font-bold text-slate-900">{manualOrderCreatedResult.orderNumber}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Nama Pendaftar:</span>
+                      <span className="font-bold text-slate-900">{manualOrderCreatedResult.buyerName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Total Transaksi:</span>
+                      <span className="font-bold text-emerald-600">{formatRupiah(manualOrderCreatedResult.totalAmount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 block">Status Pembayaran:</span>
+                      <span className={`inline-block px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                        manualOrderCreatedResult.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {manualOrderCreatedResult.paymentStatus.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setAdminManualSubTab('approvals')}
+                      className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-xs cursor-pointer"
+                    >
+                      Lihat di Tabel Transaksi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualBuyerName('');
+                        setManualBuyerEmail('');
+                        setManualBuyerPhone('');
+                        setManualPaymentRef('');
+                        setManualTransferNotes('');
+                        setManualOrderCreatedResult(null);
+                      }}
+                      className="px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs cursor-pointer"
+                    >
+                      + Input Transaksi Baru Lagi
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Form Input Transaksi Manual */}
+              <form onSubmit={handleSubmitManualOrder} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Event & Tiket & Buyer */}
+                  <div className="lg:col-span-2 space-y-5">
+                    {/* Event & Tier Selection */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-purple-600" />
+                        1. Pilih Event & Kategori Tiket
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Event Tujuan *</label>
+                          <select
+                            required
+                            value={manualEventId}
+                            onChange={(e) => setManualEventId(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium"
+                          >
+                            {events.map((evt) => (
+                              <option key={evt.id} value={evt.id}>
+                                {evt.title} ({evt.category})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Kategori Tiket (Tier) *</label>
+                          {(() => {
+                            const curEvent = events.find(e => e.id === manualEventId);
+                            const tiers = curEvent?.tickets || [];
+                            return (
+                              <select
+                                required
+                                value={manualTierId}
+                                onChange={(e) => setManualTierId(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium"
+                              >
+                                {tiers.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name} - {t.price === 0 ? 'Gratis' : formatRupiah(t.price)} (Sisa: {Math.max(0, t.quota - (t.soldCount || 0))})
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Jumlah Tiket *</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            required
+                            value={manualQuantity}
+                            onChange={(e) => setManualQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Buyer Information */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-purple-600" />
+                        2. Identitas Pembeli / Pendaftar
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Nama Lengkap Pembeli *</label>
+                          <input
+                            type="text"
+                            required
+                            value={manualBuyerName}
+                            onChange={(e) => setManualBuyerName(e.target.value)}
+                            placeholder="Contoh: Rahmat Hidayat"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Email Pembeli (Kirim Tiket) *</label>
+                          <input
+                            type="email"
+                            required
+                            value={manualBuyerEmail}
+                            onChange={(e) => setManualBuyerEmail(e.target.value)}
+                            placeholder="Contoh: rahmat@gmail.com"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">No. WhatsApp / Telepon</label>
+                          <input
+                            type="text"
+                            value={manualBuyerPhone}
+                            onChange={(e) => setManualBuyerPhone(e.target.value)}
+                            placeholder="Contoh: 081234567890"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Details */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-purple-600" />
+                        3. Metode & Detail Pembayaran Manual
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Metode Pembayaran *</label>
+                          <select
+                            value={manualPaymentMethod}
+                            onChange={(e) => setManualPaymentMethod(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium"
+                          >
+                            <option value="transfer_manual">Transfer Bank Manual (Internal)</option>
+                            <option value="cash_loket">Tunai / Cash di Loket (On The Spot)</option>
+                            <option value="qris_manual">QRIS Statis / Mesin EDC Kasir</option>
+                          </select>
+                        </div>
+
+                        {manualPaymentMethod === 'transfer_manual' && (
+                          <div>
+                            <label className="block font-bold text-slate-700 mb-1">Rekening Bank Tujuan (Master Data) *</label>
+                            <select
+                              value={manualSelectedBankId}
+                              onChange={(e) => setManualSelectedBankId(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium"
+                            >
+                              {currentBankAccounts.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.bankName} - {b.accountNumber} ({b.accountName})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">No. Referensi / Nomor Struk / Mutasi</label>
+                          <input
+                            type="text"
+                            value={manualPaymentRef}
+                            onChange={(e) => setManualPaymentRef(e.target.value)}
+                            placeholder="Contoh: REF-BCA-981293 / STRUK-001"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Rekening & Nama Pengirim (Jika Transfer)</label>
+                          <input
+                            type="text"
+                            value={manualSenderAccountName}
+                            onChange={(e) => setManualSenderAccountName(e.target.value)}
+                            placeholder="Contoh: Andi Pratama (BCA)"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block font-bold text-slate-700 mb-1">Catatan Khusus Petugas Admin / Kasir</label>
+                          <input
+                            type="text"
+                            value={manualTransferNotes}
+                            onChange={(e) => setManualTransferNotes(e.target.value)}
+                            placeholder="Contoh: Pembayaran tunai diterima langsung di kasir loket gate 1"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Direct Action */}
+                    <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-xl space-y-2 text-xs">
+                      <span className="font-bold text-purple-900 block">Pilihan Status Pembayaran Tiket:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                          manualIsImmediatePaid ? 'bg-white border-purple-600 ring-2 ring-purple-500/20 shadow-xs' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="manualStatus"
+                            checked={manualIsImmediatePaid}
+                            onChange={() => setManualIsImmediatePaid(true)}
+                            className="mt-0.5 text-purple-600"
+                          />
+                          <div>
+                            <span className="font-extrabold text-slate-900 block">Langsung LUNAS (PAID)</span>
+                            <span className="text-[11px] text-slate-500">
+                              E-Tiket resmi dengan QR Code langsung terbit, hak kreator langsung dikreditkan ke saldo dompet, dan notifikasi email terkirim.
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                          !manualIsImmediatePaid ? 'bg-white border-purple-600 ring-2 ring-purple-500/20 shadow-xs' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="manualStatus"
+                            checked={!manualIsImmediatePaid}
+                            onChange={() => setManualIsImmediatePaid(false)}
+                            className="mt-0.5 text-purple-600"
+                          />
+                          <div>
+                            <span className="font-extrabold text-slate-900 block">Menunggu Approval (Pending)</span>
+                            <span className="text-[11px] text-slate-500">
+                              Masuk ke daftar antrean verifikasi manual untuk dicek ulang bukti transfernya sebelum disetujui.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Financial Split Calculator (Blueprint v3) */}
+                  <div className="space-y-4">
+                    {(() => {
+                      const curEvent = events.find(e => e.id === manualEventId);
+                      const curTier = curEvent?.tickets.find(t => t.id === manualTierId);
+                      const unitPrice = curTier ? Number(curTier.price) : 0;
+                      const isFree = unitPrice === 0;
+                      const subtotal = unitPrice * manualQuantity;
+                      const platformFee = isFree ? 0 : 2000; // Flat Rp 2.000 (Blueprint v3)
+                      const totalAmount = subtotal + platformFee;
+                      const potonganKreator = isFree ? 0 : Math.round(0.02 * subtotal); // 2%
+                      const netKreator = isFree ? 0 : Math.max(0, subtotal - potonganKreator);
+                      const totalMarginPlatform = isFree ? 0 : (platformFee + potonganKreator);
+
+                      return (
+                        <div className="p-5 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-4 text-xs">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <h4 className="font-bold text-emerald-400 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                              <Wallet className="w-4 h-4" />
+                              Kalkulasi Finansial (Blueprint v3)
+                            </h4>
+                            <span className="text-[10px] px-2 py-0.5 bg-slate-800 text-slate-300 rounded-full font-mono">
+                              Otomatis
+                            </span>
+                          </div>
+
+                          <div className="space-y-2.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400">Harga Asli Tiket:</span>
+                              <span className="font-mono font-bold text-white">
+                                {formatRupiah(subtotal)}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400">Biaya Admin Platform (Flat):</span>
+                              <span className="font-mono font-bold text-blue-400">
+                                {formatRupiah(platformFee)}
+                              </span>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-sm">
+                              <span className="font-extrabold text-white">Total Tagihan Peserta:</span>
+                              <span className="font-mono font-extrabold text-emerald-400 text-base">
+                                {formatRupiah(totalAmount)}
+                              </span>
+                            </div>
+
+                            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 mt-3">
+                              <div className="text-[11px] font-bold text-slate-300">
+                                Distribusi Dana Setelah Lunas:
+                              </div>
+                              <div className="flex justify-between items-center text-[11px]">
+                                <span className="text-slate-400">Komisi Platform Kreator (2%):</span>
+                                <span className="font-mono text-amber-400">
+                                  {formatRupiah(potonganKreator)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-[11px]">
+                                <span className="text-slate-400">Hak Bersih Saldo Kreator:</span>
+                                <span className="font-mono font-bold text-emerald-300">
+                                  {formatRupiah(netKreator)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-[11px] pt-1.5 border-t border-slate-800/80">
+                                <span className="text-slate-300 font-bold">Total Margin Kas Celebes Event:</span>
+                                <span className="font-mono font-bold text-blue-300">
+                                  {formatRupiah(totalMarginPlatform)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={isSubmittingManualOrder}
+                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-colors"
+                          >
+                            {isSubmittingManualOrder ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4" />
+                            )}
+                            <span>{isSubmittingManualOrder ? 'Menerbitkan Transaksi...' : 'Simpan & Terbitkan Tiket Manual'}</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </form>
             </div>
           )}
 

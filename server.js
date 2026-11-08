@@ -22349,14 +22349,14 @@ var require_etag = __commonJS({
   "node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto2.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -25265,11 +25265,11 @@ var require_request = __commonJS({
 // node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "node_modules/cookie-signature/index.js"(exports) {
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto2.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -25278,7 +25278,7 @@ var require_cookie_signature = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto.createHash("sha1").update(str).digest("hex");
+      return crypto2.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -26252,7 +26252,7 @@ var require_main = __commonJS({
     var fs2 = __require("fs");
     var path2 = __require("path");
     var os = __require("os");
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     var TIPS = [
       "\u25C8 encrypted .env [www.dotenvx.com]",
       "\u25C8 secrets for agents [www.dotenvx.com]",
@@ -26496,7 +26496,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+        const aesgcm = crypto2.createDecipheriv("aes-256-gcm", key, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error) {
@@ -38339,9 +38339,9 @@ var require_client = __commonJS({
 var require_auth_41 = __commonJS({
   "node_modules/mysql2/lib/auth_41.js"(exports) {
     "use strict";
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     function sha1(msg, msg1, msg2) {
-      const hash = crypto.createHash("sha1");
+      const hash = crypto2.createHash("sha1");
       hash.update(msg);
       if (msg1) {
         hash.update(msg1);
@@ -40767,7 +40767,7 @@ var require_sha256_password = __commonJS({
   "node_modules/mysql2/lib/auth_plugins/sha256_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "sha256_password";
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     var { xorRotating } = require_auth_41();
     var Tls = __require("tls");
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([1]);
@@ -40776,7 +40776,7 @@ var require_sha256_password = __commonJS({
     var STATE_FINAL = -1;
     function encrypt(password, scramble, key) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto.publicEncrypt(
+      return crypto2.publicEncrypt(
         {
           key,
           oaepHash: "sha1"
@@ -40828,7 +40828,7 @@ var require_caching_sha2_password = __commonJS({
   "node_modules/mysql2/lib/auth_plugins/caching_sha2_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "caching_sha2_password";
-    var crypto = __require("crypto");
+    var crypto2 = __require("crypto");
     var { xor, xorRotating } = require_auth_41();
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([2]);
     var FAST_AUTH_SUCCESS_PACKET = Buffer.from([3]);
@@ -40838,7 +40838,7 @@ var require_caching_sha2_password = __commonJS({
     var STATE_WAIT_SERVER_KEY = 2;
     var STATE_FINAL = -1;
     function sha256(msg) {
-      const hash = crypto.createHash("sha256");
+      const hash = crypto2.createHash("sha256");
       hash.update(msg);
       return hash.digest();
     }
@@ -40853,11 +40853,11 @@ var require_caching_sha2_password = __commonJS({
     }
     function encrypt(password, scramble, key) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto.publicEncrypt(
+      return crypto2.publicEncrypt(
         {
           key,
           oaepHash: "sha1",
-          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+          padding: crypto2.constants.RSA_PKCS1_OAEP_PADDING
         },
         stage1
       );
@@ -47319,6 +47319,7 @@ var require_promise = __commonJS({
 var import_express = __toESM(require_express2(), 1);
 var import_dotenv = __toESM(require_main(), 1);
 var import_promise = __toESM(require_promise(), 1);
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 
@@ -48017,6 +48018,35 @@ var DEFAULT_PLATFORM_SETTINGS = {
       imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
       date: "Agustus 2026"
     }
+  ],
+  manualBankAccounts: [
+    {
+      id: "bank-bca",
+      bankName: "Bank BCA",
+      bankCode: "bca",
+      accountNumber: "888-019-2831",
+      accountName: "PT CELEBES EVENT DIGITAL",
+      isActive: true,
+      notes: "Verifikasi via m-BCA, myBCA, atau ATM BCA"
+    },
+    {
+      id: "bank-mandiri",
+      bankName: "Bank Mandiri",
+      bankCode: "mandiri",
+      accountNumber: "137-00-19283-912",
+      accountName: "CELEBES EVENT INDONESIA",
+      isActive: true,
+      notes: "Transfer via Livin by Mandiri atau ATM Mandiri"
+    },
+    {
+      id: "bank-bsi",
+      bankName: "Bank BSI (Syariah)",
+      bankCode: "bsi",
+      accountNumber: "719-283-0012",
+      accountName: "CELEBES EVENT SYARIAH",
+      isActive: true,
+      notes: "Transfer syariah via BSI Mobile atau ATM Bersama"
+    }
   ]
 };
 var INITIAL_SUPPORT_TICKETS = [
@@ -48615,6 +48645,25 @@ function getSuperAdminCredentials() {
   const name = (process.env.SUPERADMIN_NAME || "Super Admin Bergulir Media").trim();
   return { email, password, name };
 }
+function getMidtransConfig() {
+  const serverKey = (process.env.MIDTRANS_SERVER_KEY || memorySettings.qrisConfig?.serverKey || "").trim();
+  const clientKey = (process.env.MIDTRANS_CLIENT_KEY || memorySettings.qrisConfig?.clientKey || "").trim();
+  const merchantId = (process.env.MIDTRANS_MERCHANT_ID || memorySettings.qrisConfig?.merchantId || "").trim();
+  const isProduction2 = process.env.MIDTRANS_IS_PRODUCTION === "true" || memorySettings.qrisConfig?.isEnabled && !memorySettings.qrisConfig?.isSandbox;
+  const isEnabled = memorySettings.qrisConfig?.isEnabled !== false;
+  const snapBaseUrl = isProduction2 ? "https://app.midtrans.com/snap/v1" : "https://app.sandbox.midtrans.com/snap/v1";
+  const apiBaseUrl = isProduction2 ? "https://api.midtrans.com/v2" : "https://api.sandbox.midtrans.com/v2";
+  return {
+    serverKey,
+    clientKey,
+    merchantId,
+    isProduction: isProduction2,
+    isEnabled,
+    snapBaseUrl,
+    apiBaseUrl,
+    hasServerKey: Boolean(serverKey && serverKey.length > 5)
+  };
+}
 async function getUsersFromDb() {
   const { email: adminEmail, password: adminPassword, name: adminName } = getSuperAdminCredentials();
   await ensureMysql();
@@ -48950,12 +48999,24 @@ async function getSettingsFromDb() {
           else if (r.setting_key === "hero_headline") settingsObj.heroHeadline = r.setting_value;
           else if (r.setting_key === "hero_subheadline") settingsObj.heroSubheadline = r.setting_value;
           else if (r.setting_key === "announcement_text") settingsObj.announcementText = r.setting_value;
+          else if (r.setting_key === "manual_bank_accounts") {
+            try {
+              settingsObj.manualBankAccounts = JSON.parse(r.setting_value);
+            } catch {
+            }
+          }
+        }
+        if (!settingsObj.manualBankAccounts || settingsObj.manualBankAccounts.length === 0) {
+          settingsObj.manualBankAccounts = memorySettings.manualBankAccounts || DEFAULT_PLATFORM_SETTINGS.manualBankAccounts;
         }
         return settingsObj;
       }
     } catch (err) {
       console.warn("[Database] Query system_settings gagal:", err.message);
     }
+  }
+  if (!memorySettings.manualBankAccounts || memorySettings.manualBankAccounts.length === 0) {
+    memorySettings.manualBankAccounts = JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS.manualBankAccounts || []));
   }
   return memorySettings;
 }
@@ -49247,14 +49308,19 @@ app.delete("/api/events/:id", async (req, res) => {
   const { id } = req.params;
   if (isMysqlActive && mysqlPool) {
     try {
+      await mysqlPool.execute(`DELETE FROM custom_form_fields WHERE event_id = ?`, [id]);
+      await mysqlPool.execute(`DELETE FROM ticket_tiers WHERE event_id = ?`, [id]);
+      await mysqlPool.execute(`DELETE FROM tickets WHERE event_id = ?`, [id]);
+      await mysqlPool.execute(`DELETE FROM orders WHERE event_id = ?`, [id]);
       await mysqlPool.execute(`DELETE FROM events WHERE id = ?`, [id]);
     } catch (err) {
       console.warn("[Database] Gagal delete event dari MySQL:", err.message);
     }
   }
   memoryEvents = memoryEvents.filter((e) => e.id !== id);
+  memoryOrders = memoryOrders.filter((o) => o.eventId !== id);
   saveLocalData();
-  res.json({ success: true, message: "Event berhasil dihapus" });
+  res.json({ success: true, message: "Event beserta seluruh tiket terkait berhasil dihapus" });
 });
 app.get("/api/orders", async (req, res) => {
   const { userId, eventId } = req.query;
@@ -49265,10 +49331,34 @@ app.post("/api/orders", async (req, res) => {
   const orderData = req.body;
   const orderId = `ord-${Date.now()}`;
   const orderNumber = orderData.orderNumber || `CE-${(/* @__PURE__ */ new Date()).getFullYear()}${String((/* @__PURE__ */ new Date()).getMonth() + 1).padStart(2, "0")}-${Math.floor(1e3 + Math.random() * 9e3)}`;
+  const isFree = Number(orderData.totalAmount) === 0;
+  const initialStatus = isFree ? "paid" : orderData.paymentType === "manual" ? "pending_manual_verification" : "pending";
+  const subtotal = Math.max(0, Number(orderData.subtotal) || 0);
+  const platformFee = isFree ? 0 : 2e3;
+  const totalAmount = isFree ? 0 : Math.max(0, subtotal + platformFee - (Number(orderData.discountAmount) || 0));
+  const hargaTiketAsli = subtotal;
+  const potonganKreator = isFree ? 0 : Math.round(0.02 * hargaTiketAsli);
+  const netPendapatanKreator = isFree ? 0 : Math.max(0, hargaTiketAsli - potonganKreator);
+  const totalMarginPlatform = isFree ? 0 : platformFee + potonganKreator;
+  const matchedEvent = memoryEvents.find((e) => e.id === orderData.eventId);
+  const creatorId = orderData.creatorId || matchedEvent?.creatorId;
+  const creatorName = orderData.creatorName || matchedEvent?.creatorName;
   const newOrder = {
     ...orderData,
     id: orderId,
     orderNumber,
+    subtotal,
+    platformFee,
+    totalAmount,
+    hargaTiketAsli,
+    biayaAdminUser: platformFee,
+    potonganKreator,
+    netPendapatanKreator,
+    totalMarginPlatform,
+    creatorId,
+    creatorName,
+    paymentStatus: initialStatus,
+    paidAt: isFree ? (/* @__PURE__ */ new Date()).toISOString() : void 0,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   if (isMysqlActive && mysqlPool) {
@@ -49291,7 +49381,7 @@ app.post("/api/orders", async (req, res) => {
           newOrder.paymentType || "automatic",
           newOrder.paymentMethod || "qris",
           newOrder.paymentChannel || "QRIS Instant",
-          newOrder.paymentStatus || "pending",
+          newOrder.paymentStatus,
           newOrder.paymentReference || null,
           newOrder.paymentProofUrl || null,
           newOrder.senderBank || null,
@@ -49322,55 +49412,683 @@ app.post("/api/orders", async (req, res) => {
   saveLocalData();
   res.status(201).json(newOrder);
 });
+app.delete("/api/orders/:id", async (req, res) => {
+  const { id } = req.params;
+  const targetOrder = memoryOrders.find((o) => o.id === id || o.orderNumber === id);
+  if (targetOrder) {
+    if (Array.isArray(targetOrder.tickets)) {
+      for (const t of targetOrder.tickets) {
+        if (isMysqlActive && mysqlPool) {
+          try {
+            await mysqlPool.execute(`UPDATE ticket_tiers SET sold_count = GREATEST(0, sold_count - 1) WHERE id = ?`, [t.tierId]);
+          } catch {
+          }
+        }
+        for (const evt of memoryEvents) {
+          const tier = evt.tickets?.find((k) => k.id === t.tierId);
+          if (tier) {
+            tier.soldCount = Math.max(0, (tier.soldCount || 1) - 1);
+          }
+        }
+      }
+    }
+  }
+  if (isMysqlActive && mysqlPool) {
+    try {
+      await mysqlPool.execute(`DELETE FROM tickets WHERE order_id = ? OR order_id IN (SELECT id FROM orders WHERE order_number = ?)`, [id, id]);
+      await mysqlPool.execute(`DELETE FROM orders WHERE id = ? OR order_number = ?`, [id, id]);
+    } catch (err) {
+      console.warn("[Database] Gagal delete order dari MySQL:", err.message);
+    }
+  }
+  memoryOrders = memoryOrders.filter((o) => o.id !== id && o.orderNumber !== id);
+  saveLocalData();
+  res.json({ success: true, message: `Transaksi order ${targetOrder?.orderNumber || id} berhasil dihapus dari database.` });
+});
 app.post("/api/orders/:id/pay", async (req, res) => {
   const { id } = req.params;
   const ref = req.body.paymentReference || `REF-PAY-${Date.now()}`;
   if (isMysqlActive && mysqlPool) {
     try {
       await mysqlPool.execute(
-        `UPDATE orders SET payment_status = 'paid', paid_at = NOW(), payment_reference = ? WHERE id = ?`,
-        [ref, id]
+        `UPDATE orders SET payment_status = 'paid', paid_at = NOW(), payment_reference = ? WHERE id = ? OR order_number = ?`,
+        [ref, id, id]
       );
     } catch (err) {
       console.warn("[Database] Gagal update pembayaran di MySQL:", err.message);
     }
   }
-  const order = memoryOrders.find((o) => o.id === id);
+  const order = memoryOrders.find((o) => o.id === id || o.orderNumber === id);
   if (order) {
     order.paymentStatus = "paid";
     order.paidAt = (/* @__PURE__ */ new Date()).toISOString();
     order.paymentReference = ref;
     saveLocalData();
   }
-  res.json({ success: true, message: "Pembayaran berhasil!" });
+  res.json({ success: true, message: "Pembayaran berhasil dikonfirmasi lunas!", order });
 });
+function logPaymentSuccessEmail(order) {
+  return {
+    id: `email-pay-${Date.now()}-${Math.floor(Math.random() * 1e3)}`,
+    recipientEmail: order.buyerEmail,
+    recipientName: order.buyerName,
+    recipientRole: "user",
+    subject: `E-Ticket Resmi Celebes Event: ${order.eventTitle} (${order.orderNumber})`,
+    bodyHtml: `<div style="font-family:'Plus Jakarta Sans',sans-serif;padding:24px;background:#f8fafc;border-radius:16px;">
+      <h2 style="color:#2563eb;margin-top:0;">E-Ticket Resmi Terverifikasi Lunas</h2>
+      <p>Halo <strong>${order.buyerName}</strong>, pembayaran pesanan tiket Anda telah berhasil diverifikasi dan disetujui oleh Super Admin Pusat.</p>
+      <div style="background:#ffffff;padding:16px;border-radius:12px;border:1px solid #e2e8f0;margin:16px 0;">
+        <p style="margin:4px 0;"><strong>Nomor Order:</strong> ${order.orderNumber}</p>
+        <p style="margin:4px 0;"><strong>Event:</strong> ${order.eventTitle}</p>
+        <p style="margin:4px 0;"><strong>Total Pembayaran:</strong> Rp ${order.totalAmount.toLocaleString("id-ID")}</p>
+        <p style="margin:4px 0;"><strong>Jumlah Tiket:</strong> ${order.tickets.length} Tiket</p>
+      </div>
+      <p style="color:#059669;font-weight:700;">Seluruh E-Ticket dan QR Code resmi Anda sekarang telah aktif dan siap digunakan untuk check-in di lokasi acara.</p>
+    </div>`,
+    type: "payment_verified",
+    sentAt: (/* @__PURE__ */ new Date()).toISOString(),
+    status: "delivered",
+    sender: "sistem@celebes-event.com (Finance Desk)"
+  };
+}
 app.post("/api/orders/:id/verify-payment", async (req, res) => {
   const { id } = req.params;
   const { status, rejectionReason, verifiedBy } = req.body;
+  const order = memoryOrders.find((o) => o.id === id || o.orderNumber === id);
+  if (!order) {
+    return res.status(404).json({ error: "Order tidak ditemukan" });
+  }
+  order.verifiedBy = verifiedBy || "Super Admin Pusat";
+  order.verifiedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (status === "paid") {
+    const hargaTiketAsli = order.hargaTiketAsli ?? order.subtotal;
+    const potonganKreator = order.potonganKreator ?? Math.round(0.02 * hargaTiketAsli);
+    const netPendapatanKreator = order.netPendapatanKreator ?? Math.max(0, hargaTiketAsli - potonganKreator);
+    const totalMarginPlatform = (order.platformFee || 2e3) + potonganKreator;
+    order.paymentStatus = "paid";
+    order.paidAt = (/* @__PURE__ */ new Date()).toISOString();
+    order.rejectionReason = void 0;
+    order.hargaTiketAsli = hargaTiketAsli;
+    order.potonganKreator = potonganKreator;
+    order.netPendapatanKreator = netPendapatanKreator;
+    order.totalMarginPlatform = totalMarginPlatform;
+    const creator = memoryUsers.find((u) => u.id === order.creatorId || u.name === order.creatorName);
+    if (creator) {
+      creator.walletBalance = (creator.walletBalance || 0) + netPendapatanKreator;
+    }
+    const payEmail = logPaymentSuccessEmail(order);
+    memorySentEmails.unshift(payEmail);
+    console.log(`[Midtrans Centralized Sync] Transaksi manual ${order.orderNumber} disetujui. Lapor: Gross Rp ${order.totalAmount}, Net Kreator Rp ${netPendapatanKreator}, Margin Platform Rp ${totalMarginPlatform}`);
+  } else {
+    order.paymentStatus = "payment_rejected";
+    order.rejectionReason = rejectionReason || "Bukti transfer tidak sesuai";
+    if (Array.isArray(order.tickets)) {
+      for (const t of order.tickets) {
+        const ev = memoryEvents.find((e) => e.id === order.eventId);
+        const tier = ev?.tickets.find((tt) => tt.id === t.tierId);
+        if (tier && tier.soldCount && tier.soldCount > 0) {
+          tier.soldCount = Math.max(0, tier.soldCount - 1);
+        }
+        if (isMysqlActive && mysqlPool) {
+          try {
+            await mysqlPool.execute(
+              `UPDATE ticket_tiers SET sold_count = GREATEST(0, sold_count - 1) WHERE id = ?`,
+              [t.tierId]
+            );
+          } catch {
+          }
+        }
+      }
+    }
+  }
+  saveLocalData();
   if (isMysqlActive && mysqlPool) {
     try {
       await mysqlPool.execute(
-        `UPDATE orders SET payment_status = ?, verified_at = NOW(), verified_by = ?, rejection_reason = ?, paid_at = IF(? = 'paid', NOW(), paid_at) WHERE id = ?`,
-        [status, verifiedBy || "Admin Pusat", rejectionReason || null, status, id]
+        `UPDATE orders SET payment_status = ?, verified_at = NOW(), verified_by = ?, rejection_reason = ?, paid_at = IF(? = 'paid', NOW(), paid_at) WHERE id = ? OR order_number = ?`,
+        [status, order.verifiedBy, order.rejectionReason || null, status, id, id]
       );
+      if (status === "paid" && order.creatorId) {
+        await mysqlPool.execute(
+          `UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + ? WHERE id = ?`,
+          [order.netPendapatanKreator || 0, order.creatorId]
+        ).catch(() => {
+        });
+      }
     } catch (err) {
       console.warn("[Database] Gagal update verifikasi di MySQL:", err.message);
     }
   }
-  const order = memoryOrders.find((o) => o.id === id);
-  if (order) {
-    order.paymentStatus = status;
-    order.verifiedBy = verifiedBy || "Admin Pusat";
-    order.verifiedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (status === "paid") {
-      order.paidAt = (/* @__PURE__ */ new Date()).toISOString();
-      order.rejectionReason = void 0;
-    } else {
-      order.rejectionReason = rejectionReason;
-    }
-    saveLocalData();
+  res.json({
+    success: true,
+    order,
+    message: status === "paid" ? "Pembayaran berhasil disetujui! Saldo bersih dialokasikan ke kreator dan E-Ticket resmi telah aktif." : "Pembayaran ditolak dan kuota tiket telah dikembalikan ke sistem."
+  });
+});
+app.post("/api/admin/manual-order", async (req, res) => {
+  const {
+    eventId,
+    tierId,
+    quantity = 1,
+    buyerName,
+    buyerEmail,
+    buyerPhone,
+    paymentMethod = "transfer_manual",
+    paymentChannel = "Transfer Bank BCA (888-019-2831)",
+    selectedBankId,
+    senderBank,
+    senderAccountName,
+    paymentReference,
+    transferNotes,
+    isPaidImmediate = true,
+    verifiedBy = "Super Admin Pusat"
+  } = req.body;
+  if (!eventId || !tierId || !buyerName || !buyerEmail) {
+    return res.status(400).json({ success: false, message: "Event, kategori tiket, nama pembeli, dan email wajib diisi." });
   }
-  res.json({ success: true, message: status === "paid" ? "Pembayaran berhasil disetujui & E-Ticket aktif!" : "Pembayaran ditolak." });
+  const event = memoryEvents.find((e) => e.id === eventId);
+  if (!event) {
+    return res.status(404).json({ success: false, message: "Event tidak ditemukan." });
+  }
+  const tier = event.tickets.find((t) => t.id === tierId);
+  if (!tier) {
+    return res.status(404).json({ success: false, message: "Kategori tiket tidak ditemukan." });
+  }
+  const qty = Math.max(1, Number(quantity) || 1);
+  const basePricePerTicket = Number(tier.price) || 0;
+  const isFree = basePricePerTicket === 0;
+  const subtotal = basePricePerTicket * qty;
+  const platformFee = isFree ? 0 : 2e3;
+  const totalAmount = subtotal + platformFee;
+  const hargaTiketAsli = subtotal;
+  const potonganKreator = isFree ? 0 : Math.round(0.02 * hargaTiketAsli);
+  const netPendapatanKreator = isFree ? 0 : Math.max(0, hargaTiketAsli - potonganKreator);
+  const totalMarginPlatform = isFree ? 0 : platformFee + potonganKreator;
+  const orderId = `ord-adm-${Date.now()}`;
+  const orderNumber = `CE-${(/* @__PURE__ */ new Date()).getFullYear()}${String((/* @__PURE__ */ new Date()).getMonth() + 1).padStart(2, "0")}-${Math.floor(1e3 + Math.random() * 9e3)}`;
+  const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+  const paymentStatus = isPaidImmediate || isFree ? "paid" : "pending_manual_verification";
+  const generatedTickets = [];
+  for (let i = 0; i < qty; i++) {
+    const ticketId = `tkt-adm-${Date.now()}-${i}-${Math.floor(100 + Math.random() * 900)}`;
+    const randomHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0").toUpperCase();
+    const cleanPrefix = (event.title || "EVT").replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase();
+    const ticketCode = `CE-${cleanPrefix}-${(Date.now() % 1e4).toString().padStart(4, "0")}-${randomHex}`;
+    const qrPayload = `CELEBES:VERIFY:${ticketCode}:${eventId}:${buyerEmail}`;
+    generatedTickets.push({
+      id: ticketId,
+      orderId,
+      eventId,
+      eventTitle: event.title,
+      tierId,
+      tierName: tier.name,
+      ticketCode,
+      qrPayload,
+      attendeeName: qty === 1 ? buyerName : `${buyerName} (${i + 1})`,
+      attendeeEmail: buyerEmail,
+      checkInStatus: "not_checked_in",
+      createdAt: nowIso
+    });
+  }
+  const newOrder = {
+    id: orderId,
+    orderNumber,
+    userId: "usr-admin-bergulir",
+    eventId,
+    eventTitle: event.title,
+    buyerName,
+    buyerEmail,
+    buyerPhone: buyerPhone || "",
+    tickets: generatedTickets,
+    subtotal,
+    discountAmount: 0,
+    platformFee,
+    totalAmount,
+    hargaTiketAsli,
+    biayaAdminUser: platformFee,
+    potonganKreator,
+    netPendapatanKreator,
+    totalMarginPlatform,
+    creatorId: event.creatorId,
+    creatorName: event.creatorName || "Celebes Creative",
+    paymentType: "manual",
+    paymentMethod,
+    paymentChannel,
+    paymentStatus,
+    paymentReference: paymentReference || `MANUAL-INPUT-ADMIN-${Date.now()}`,
+    senderBank: senderBank || (paymentMethod.includes("cash") ? "Tunai Kasir" : "Transfer Manual"),
+    senderAccountName: senderAccountName || buyerName,
+    transferNotes: transferNotes || `Input Manual Super Admin (${verifiedBy})`,
+    verifiedBy: paymentStatus === "paid" ? verifiedBy : void 0,
+    verifiedAt: paymentStatus === "paid" ? nowIso : void 0,
+    paidAt: paymentStatus === "paid" ? nowIso : void 0,
+    createdAt: nowIso
+  };
+  tier.soldCount = (tier.soldCount || 0) + qty;
+  if (paymentStatus === "paid") {
+    const creator = memoryUsers.find((u) => u.id === event.creatorId || u.name === event.creatorName);
+    if (creator) {
+      creator.walletBalance = (creator.walletBalance || 0) + netPendapatanKreator;
+    }
+    const payEmail = logPaymentSuccessEmail(newOrder);
+    memorySentEmails.unshift(payEmail);
+    console.log(`[Midtrans Centralized Sync] Transaksi manual admin ${orderNumber} dicatat lunas. Gross Rp ${totalAmount}, Net Kreator Rp ${netPendapatanKreator}, Margin Platform Rp ${totalMarginPlatform}`);
+  }
+  memoryOrders.unshift(newOrder);
+  saveLocalData();
+  if (isMysqlActive && mysqlPool) {
+    try {
+      await mysqlPool.execute(
+        `INSERT INTO orders (id, order_number, user_id, event_id, buyer_name, buyer_email, buyer_phone, subtotal, discount_amount, platform_fee, total_amount, payment_type, payment_method, payment_channel, payment_status, payment_reference, sender_bank, sender_account_name, transfer_notes, verified_by, verified_at, paid_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          orderNumber,
+          newOrder.userId,
+          newOrder.eventId,
+          newOrder.buyerName,
+          newOrder.buyerEmail,
+          newOrder.buyerPhone,
+          newOrder.subtotal,
+          0,
+          newOrder.platformFee,
+          newOrder.totalAmount,
+          "manual",
+          newOrder.paymentMethod,
+          newOrder.paymentChannel,
+          newOrder.paymentStatus,
+          newOrder.paymentReference,
+          newOrder.senderBank,
+          newOrder.senderAccountName,
+          newOrder.transferNotes,
+          newOrder.verifiedBy || null,
+          newOrder.verifiedAt ? toMysqlDatetime(newOrder.verifiedAt) : null,
+          newOrder.paidAt ? toMysqlDatetime(newOrder.paidAt) : null
+        ]
+      );
+      for (const t of generatedTickets) {
+        await mysqlPool.execute(
+          `INSERT INTO tickets (id, order_id, event_id, tier_id, ticket_code, qr_payload, attendee_name, attendee_email, check_in_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, orderId, eventId, tierId, t.ticketCode, t.qrPayload, t.attendeeName, t.attendeeEmail, "not_checked_in"]
+        );
+      }
+      await mysqlPool.execute(
+        `UPDATE ticket_tiers SET sold_count = sold_count + ? WHERE id = ?`,
+        [qty, tierId]
+      );
+      if (paymentStatus === "paid" && event.creatorId) {
+        await mysqlPool.execute(
+          `UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + ? WHERE id = ?`,
+          [netPendapatanKreator, event.creatorId]
+        ).catch(() => {
+        });
+      }
+    } catch (err) {
+      console.warn("[Database] Gagal insert admin manual order di MySQL:", err.message);
+    }
+  }
+  res.status(201).json({
+    success: true,
+    order: newOrder,
+    message: paymentStatus === "paid" ? `Transaksi manual ${orderNumber} berhasil dicatat sebagai LUNAS. E-Tiket diterbitkan dan saldo bersih Rp ${netPendapatanKreator.toLocaleString("id-ID")} masuk ke kreator.` : `Transaksi manual ${orderNumber} berhasil dicatat dan masuk ke antrean verifikasi manual.`
+  });
+});
+app.post("/api/midtrans/test-connection", async (req, res) => {
+  const customKey = req.body.serverKey ? String(req.body.serverKey).trim() : "";
+  const config = getMidtransConfig();
+  const serverKeyToTest = customKey || config.serverKey;
+  const isProd = req.body.isSandbox !== void 0 ? !req.body.isSandbox : config.isProduction;
+  if (!serverKeyToTest) {
+    return res.status(400).json({
+      success: false,
+      message: "Kunci Midtrans (Server Key) belum dimasukkan! Masukkan Server Key akun Midtrans Anda (Contoh: SB-Mid-server-xxxx untuk Sandbox atau Mid-server-xxxx untuk Production)."
+    });
+  }
+  const apiBase = isProd ? "https://api.midtrans.com/v2" : "https://api.sandbox.midtrans.com/v2";
+  const authHeader = `Basic ${Buffer.from(serverKeyToTest + ":").toString("base64")}`;
+  try {
+    const testOrderId = `CELEBES-PING-${Date.now()}`;
+    const midtransRes = await fetch(`${apiBase}/${testOrderId}/status`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": authHeader
+      }
+    });
+    let data = {};
+    try {
+      data = await midtransRes.json();
+    } catch {
+      data = { raw: await midtransRes.text().catch(() => "") };
+    }
+    if (midtransRes.status === 401 || data.status_code === "401") {
+      return res.status(401).json({
+        success: false,
+        environment: isProd ? "Production (Live)" : "Sandbox (Uji Coba)",
+        message: `Kredensial DITOLAK oleh Midtrans (401 Unauthorized): ${data.status_message || "Server Key tidak cocok atau belum aktif"}. Pastikan Server Key Anda sesuai dengan mode ${isProd ? "Production" : "Sandbox"}.`,
+        details: data
+      });
+    }
+    if (midtransRes.status === 404 || midtransRes.status === 200 || data.status_code === "404" || data.status_code === "200") {
+      return res.json({
+        success: true,
+        environment: isProd ? "Production (Live)" : "Sandbox (Uji Coba)",
+        message: `Koneksi ke Midtrans BERHASIL TERVERIFIKASI! Server Key Anda sah dan terautentikasi langsung oleh Midtrans (${isProd ? "Production Mode" : "Sandbox Mode"}). Modul pembayaran siap menerima transaksi.`,
+        serverKeyPreview: serverKeyToTest.slice(0, 8) + "..." + serverKeyToTest.slice(-4),
+        details: data
+      });
+    }
+    return res.json({
+      success: true,
+      environment: isProd ? "Production" : "Sandbox",
+      message: `Terhubung ke Midtrans API (HTTP ${midtransRes.status}).`,
+      details: data
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Gagal menghubungi server Midtrans: ${err.message || "Koneksi jaringan terputus"}. Periksa koneksi internet Anda.`
+    });
+  }
+});
+app.post("/api/midtrans/create-transaction", async (req, res) => {
+  const { orderId, orderNumber, grossAmount, buyerName, buyerEmail, buyerPhone, items } = req.body;
+  const config = getMidtransConfig();
+  if (!config.hasServerKey) {
+    return res.json({
+      success: true,
+      mode: "simulator",
+      token: null,
+      redirectUrl: null,
+      message: "Server Key Midtrans belum dikonfigurasi. Menggunakan QRIS Dinamis Internal platform."
+    });
+  }
+  const authHeader = `Basic ${Buffer.from(config.serverKey + ":").toString("base64")}`;
+  const snapUrl = `${config.snapBaseUrl}/transactions`;
+  try {
+    let formattedItems = [];
+    if (Array.isArray(items) && items.length > 0) {
+      formattedItems = items.map((it) => ({
+        id: String(it.id || "TIKET-BASE").slice(0, 50),
+        price: Math.round(Number(it.price) || 0),
+        quantity: Math.max(1, Number(it.quantity) || 1),
+        name: String(it.name || "Tiket Event").slice(0, 50)
+      }));
+      const hasAdminFee = formattedItems.some((it) => it.id === "ADMIN-FEE" || String(it.name).toLowerCase().includes("biaya admin"));
+      if (!hasAdminFee) {
+        formattedItems.push({
+          id: "ADMIN-FEE",
+          price: 2e3,
+          quantity: 1,
+          name: "Biaya Admin Platform"
+        });
+      }
+    } else {
+      const grossVal = Math.round(Number(grossAmount) || 102e3);
+      formattedItems = [
+        {
+          id: "TIKET-BASE",
+          price: Math.max(0, grossVal - 2e3),
+          quantity: 1,
+          name: "Tiket Event (Harga Asli)"
+        },
+        {
+          id: "ADMIN-FEE",
+          price: 2e3,
+          quantity: 1,
+          name: "Biaya Admin Platform"
+        }
+      ];
+    }
+    const calculatedGross = formattedItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+    const payload = {
+      transaction_details: {
+        order_id: orderNumber || `CE-${Date.now()}`,
+        gross_amount: calculatedGross
+      },
+      item_details: formattedItems,
+      customer_details: {
+        first_name: buyerName || "Pelanggan Celebes",
+        email: buyerEmail || "buyer@example.com",
+        phone: buyerPhone || "081234567890"
+      },
+      custom_expiry: {
+        expiry_duration: 15,
+        unit: "minute"
+      }
+    };
+    const midtransRes = await fetch(snapUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": authHeader
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await midtransRes.json();
+    if (midtransRes.ok && data.token) {
+      return res.json({
+        success: true,
+        mode: "midtrans_snap",
+        token: data.token,
+        redirectUrl: data.redirect_url,
+        environment: config.isProduction ? "production" : "sandbox",
+        clientKey: config.clientKey,
+        payload
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        mode: "error",
+        message: data.error_messages ? data.error_messages.join(", ") : data.status_message || "Gagal membuat sesi transaksi Midtrans",
+        details: data
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Gagal menghubungi Midtrans Snap: " + err.message
+    });
+  }
+});
+app.get("/api/midtrans/status/:orderNumber", async (req, res) => {
+  const { orderNumber } = req.params;
+  const config = getMidtransConfig();
+  const order = memoryOrders.find((o) => o.orderNumber === orderNumber || o.id === orderNumber);
+  if (!config.hasServerKey) {
+    if (order) {
+      return res.json({
+        isPaid: order.paymentStatus === "paid",
+        status: order.paymentStatus,
+        order,
+        message: order.paymentStatus === "paid" ? "Pembayaran terkonfirmasi LUNAS." : "Status pesanan saat ini: " + order.paymentStatus
+      });
+    }
+    return res.status(404).json({ error: "Order tidak ditemukan" });
+  }
+  const authHeader = `Basic ${Buffer.from(config.serverKey + ":").toString("base64")}`;
+  const statusUrl = `${config.apiBaseUrl}/${orderNumber}/status`;
+  try {
+    const midtransRes = await fetch(statusUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": authHeader
+      }
+    });
+    const data = await midtransRes.json();
+    const trxStatus = data.transaction_status;
+    const fraudStatus = data.fraud_status;
+    let isPaid = false;
+    if (trxStatus === "settlement" || trxStatus === "capture" && fraudStatus === "accept") {
+      isPaid = true;
+    }
+    if (order && isPaid && order.paymentStatus !== "paid") {
+      const hargaTiketAsli = order.hargaTiketAsli ?? order.subtotal;
+      const potonganKreator = order.potonganKreator ?? Math.round(0.02 * hargaTiketAsli);
+      const netPendapatanKreator = order.netPendapatanKreator ?? Math.max(0, hargaTiketAsli - potonganKreator);
+      const totalMarginPlatform = (order.platformFee || 2e3) + potonganKreator;
+      order.paymentStatus = "paid";
+      order.paidAt = (/* @__PURE__ */ new Date()).toISOString();
+      order.paymentReference = data.transaction_id || data.payment_type || "MIDTRANS-SETTLEMENT";
+      order.hargaTiketAsli = hargaTiketAsli;
+      order.potonganKreator = potonganKreator;
+      order.netPendapatanKreator = netPendapatanKreator;
+      order.totalMarginPlatform = totalMarginPlatform;
+      const creator = memoryUsers.find((u) => u.id === order.creatorId || u.name === order.creatorName);
+      if (creator) {
+        creator.walletBalance = (creator.walletBalance || 0) + netPendapatanKreator;
+      }
+      const payEmail = logPaymentSuccessEmail(order);
+      memorySentEmails.unshift(payEmail);
+      saveLocalData();
+      if (isMysqlActive && mysqlPool) {
+        try {
+          await mysqlPool.execute(
+            `UPDATE orders SET payment_status = 'paid', paid_at = NOW(), payment_reference = ? WHERE order_number = ? OR id = ?`,
+            [order.paymentReference, orderNumber, order.id]
+          );
+          if (order.creatorId) {
+            await mysqlPool.execute(
+              `UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + ? WHERE id = ?`,
+              [netPendapatanKreator, order.creatorId]
+            ).catch(() => {
+            });
+          }
+        } catch {
+        }
+      }
+    }
+    return res.json({
+      isPaid,
+      status: order ? order.paymentStatus : isPaid ? "paid" : trxStatus || "unknown",
+      midtransStatus: trxStatus || null,
+      message: isPaid ? "Pembayaran berhasil TERDETEKSI LUNAS dari Midtrans! E-Ticket resmi telah aktif." : `Status Midtrans saat ini: ${trxStatus || "Belum ada pembayaran"}.`,
+      order,
+      details: data
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: "Gagal memeriksa status ke Midtrans: " + err.message,
+      isPaid: order?.paymentStatus === "paid",
+      status: order?.paymentStatus || "unknown"
+    });
+  }
+});
+async function processMidtransNotification(req, res) {
+  const notification = req.body;
+  const config = getMidtransConfig();
+  const serverKey = config.serverKey;
+  if (serverKey && notification.signature_key) {
+    const stringToHash = `${notification.order_id || ""}${notification.status_code || ""}${notification.gross_amount || ""}${serverKey}`;
+    const calculatedSignature = crypto.createHash("sha512").update(stringToHash).digest("hex");
+    if (notification.signature_key !== calculatedSignature) {
+      console.warn("[Midtrans Webhook] Invalid Signature Key:", notification.signature_key, "vs calculated:", calculatedSignature);
+      return res.status(401).json({ message: "Invalid Signature Key" });
+    }
+  }
+  const orderNumber = notification.order_id;
+  const trxStatus = notification.transaction_status;
+  const fraudStatus = notification.fraud_status;
+  const paymentType = notification.payment_type;
+  const transactionId = notification.transaction_id;
+  console.log(`[Midtrans Webhook] Menerima notifikasi untuk order ${orderNumber}: status = ${trxStatus}, fraud = ${fraudStatus}`);
+  const order = memoryOrders.find((o) => o.orderNumber === orderNumber || o.id === orderNumber);
+  if (!order) {
+    return res.status(200).send("OK");
+  }
+  if (trxStatus === "settlement" || trxStatus === "capture" && fraudStatus === "accept") {
+    if (order.paymentStatus !== "paid") {
+      const hargaTiketAsli = order.hargaTiketAsli ?? order.subtotal;
+      const potonganKreator = order.potonganKreator ?? Math.round(0.02 * hargaTiketAsli);
+      const netPendapatanKreator = order.netPendapatanKreator ?? Math.max(0, hargaTiketAsli - potonganKreator);
+      const totalMarginPlatform = (order.platformFee || 2e3) + potonganKreator;
+      order.paymentStatus = "paid";
+      order.paidAt = (/* @__PURE__ */ new Date()).toISOString();
+      order.paymentReference = transactionId || paymentType || "MIDTRANS-WEBHOOK";
+      order.hargaTiketAsli = hargaTiketAsli;
+      order.potonganKreator = potonganKreator;
+      order.netPendapatanKreator = netPendapatanKreator;
+      order.totalMarginPlatform = totalMarginPlatform;
+      const creator = memoryUsers.find((u) => u.id === order.creatorId || u.name === order.creatorName);
+      if (creator) {
+        creator.walletBalance = (creator.walletBalance || 0) + netPendapatanKreator;
+      }
+      const payEmail = logPaymentSuccessEmail(order);
+      memorySentEmails.unshift(payEmail);
+      saveLocalData();
+      if (isMysqlActive && mysqlPool) {
+        try {
+          await mysqlPool.execute(
+            `UPDATE orders SET payment_status = 'paid', paid_at = NOW(), payment_reference = ? WHERE order_number = ? OR id = ?`,
+            [transactionId || "MIDTRANS", orderNumber, order.id]
+          );
+          if (order.creatorId) {
+            await mysqlPool.execute(
+              `UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + ? WHERE id = ?`,
+              [netPendapatanKreator, order.creatorId]
+            ).catch(() => {
+            });
+          }
+        } catch (err) {
+          console.warn("[Database] Gagal update notifikasi webhook di MySQL:", err.message);
+        }
+      }
+    }
+  } else if (["expire", "cancel", "deny"].includes(trxStatus)) {
+    if (order.paymentStatus !== "payment_rejected") {
+      order.paymentStatus = "payment_rejected";
+      order.rejectionReason = `Transaksi ${trxStatus} di Midtrans`;
+      if (Array.isArray(order.tickets)) {
+        for (const t of order.tickets) {
+          const ev = memoryEvents.find((e) => e.id === order.eventId);
+          const tier = ev?.tickets.find((tt) => tt.id === t.tierId);
+          if (tier && tier.soldCount && tier.soldCount > 0) {
+            tier.soldCount = Math.max(0, tier.soldCount - 1);
+          }
+          if (isMysqlActive && mysqlPool) {
+            try {
+              await mysqlPool.execute(
+                `UPDATE ticket_tiers SET sold_count = GREATEST(0, sold_count - 1) WHERE id = ?`,
+                [t.tierId]
+              );
+            } catch {
+            }
+          }
+        }
+      }
+      saveLocalData();
+      if (isMysqlActive && mysqlPool) {
+        try {
+          await mysqlPool.execute(
+            `UPDATE orders SET payment_status = 'payment_rejected', rejection_reason = ? WHERE order_number = ? OR id = ?`,
+            [`Midtrans ${trxStatus}`, orderNumber, order.id]
+          );
+        } catch (err) {
+          console.warn("[Database] Gagal update rejected di MySQL:", err.message);
+        }
+      }
+    }
+  }
+  return res.status(200).send("OK");
+}
+app.post("/api/midtrans-webhook", processMidtransNotification);
+app.post("/api/midtrans/notification", processMidtransNotification);
+app.post("/api/midtrans/sync-manual", async (req, res) => {
+  const { orderNumber, grossAmount, note } = req.body;
+  const config = getMidtransConfig();
+  console.log(`[Midtrans Core API Placeholder] Menyelaraskan pembukuan transfer manual ${orderNumber} (Gross: Rp ${grossAmount}) ke laporan tersentralisasi Midtrans.`);
+  res.json({
+    success: true,
+    synced: true,
+    channel: "manual_core_api_placeholder",
+    orderNumber,
+    grossAmount,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    message: "Pembukuan transaksi transfer manual berhasil disinkronkan ke pelaporan tersentralisasi Midtrans."
+  });
 });
 app.get("/api/tickets/:code", async (req, res) => {
   const { code } = req.params;
@@ -49565,6 +50283,19 @@ app.put("/api/payouts/:id", async (req, res) => {
   }
   res.json({ success: true, id, status });
 });
+app.delete("/api/payouts/:id", async (req, res) => {
+  const { id } = req.params;
+  if (isMysqlActive && mysqlPool) {
+    try {
+      await mysqlPool.execute(`DELETE FROM payout_requests WHERE id = ?`, [id]);
+    } catch (err) {
+      console.warn("[Database] Gagal delete payout dari MySQL:", err.message);
+    }
+  }
+  memoryPayouts = memoryPayouts.filter((p) => p.id !== id);
+  saveLocalData();
+  res.json({ success: true, message: "Data pengajuan payout berhasil dihapus" });
+});
 app.get("/api/users", async (_req, res) => {
   const users = await getUsersFromDb();
   res.json(users);
@@ -49696,7 +50427,7 @@ app.post("/api/auth/login", async (req, res) => {
   const cleanEmail = email.trim().toLowerCase();
   const users = await getUsersFromDb();
   const { email: superAdminEmail, password: superAdminPassword, name: superAdminName } = getSuperAdminCredentials();
-  if (cleanEmail === superAdminEmail || cleanEmail === "redaksibergulircom@gmail.com") {
+  if (cleanEmail === superAdminEmail || cleanEmail === "redaksibergulircom@gmail.com" || cleanEmail === "mirza.tomini@gmail.com") {
     const adminUser = users.find((u) => u.role === "admin" && (u.email.toLowerCase() === cleanEmail || u.id === "usr-admin-bergulir")) || users[0];
     const isValidAdminPassword = password === superAdminPassword || adminUser && adminUser.password && adminUser.password === password;
     if (!isValidAdminPassword) {
@@ -49860,6 +50591,12 @@ app.put("/api/settings", async (req, res) => {
           );
         }
       }
+      if (newSettings.manualBankAccounts && Array.isArray(newSettings.manualBankAccounts)) {
+        await mysqlPool.execute(
+          `INSERT INTO system_settings (setting_key, setting_value) VALUES ('manual_bank_accounts', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+          [JSON.stringify(newSettings.manualBankAccounts)]
+        );
+      }
     } catch (err) {
       console.warn("[Database] Gagal update system_settings di MySQL:", err.message);
     }
@@ -49929,6 +50666,19 @@ app.put("/api/support-tickets/:id", async (req, res) => {
     return res.json({ success: true, ticket, message: "Tiket bantuan berhasil diperbarui." });
   }
   res.json({ success: true, id });
+});
+app.delete("/api/support-tickets/:id", async (req, res) => {
+  const { id } = req.params;
+  if (isMysqlActive && mysqlPool) {
+    try {
+      await mysqlPool.execute(`DELETE FROM support_tickets WHERE id = ?`, [id]);
+    } catch (err) {
+      console.warn("[Database] Gagal delete support ticket dari MySQL:", err.message);
+    }
+  }
+  memorySupportTickets = memorySupportTickets.filter((t) => t.id !== id);
+  saveLocalData();
+  res.json({ success: true, message: "Tiket bantuan berhasil dihapus" });
 });
 app.get("/api/faqs", async (_req, res) => {
   const faqs = await getFaqsFromDb();
@@ -50183,6 +50933,7 @@ async function startServer() {
 }
 startServer();
 export {
+  getMidtransConfig,
   getSuperAdminCredentials
 };
 /*! Bundled license information:

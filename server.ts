@@ -663,12 +663,21 @@ async function getSettingsFromDb(): Promise<PlatformSettings> {
           else if (r.setting_key === 'hero_headline') settingsObj.heroHeadline = r.setting_value;
           else if (r.setting_key === 'hero_subheadline') settingsObj.heroSubheadline = r.setting_value;
           else if (r.setting_key === 'announcement_text') settingsObj.announcementText = r.setting_value;
+          else if (r.setting_key === 'manual_bank_accounts') {
+            try { settingsObj.manualBankAccounts = JSON.parse(r.setting_value); } catch {}
+          }
+        }
+        if (!settingsObj.manualBankAccounts || settingsObj.manualBankAccounts.length === 0) {
+          settingsObj.manualBankAccounts = memorySettings.manualBankAccounts || DEFAULT_PLATFORM_SETTINGS.manualBankAccounts;
         }
         return settingsObj;
       }
     } catch (err: any) {
       console.warn('[Database] Query system_settings gagal:', err.message);
     }
+  }
+  if (!memorySettings.manualBankAccounts || memorySettings.manualBankAccounts.length === 0) {
+    memorySettings.manualBankAccounts = JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS.manualBankAccounts || []));
   }
   return memorySettings;
 }
@@ -1306,6 +1315,203 @@ app.post('/api/orders/:id/verify-payment', async (req: Request, res: Response) =
     message: status === 'paid' 
       ? 'Pembayaran berhasil disetujui! Saldo bersih dialokasikan ke kreator dan E-Ticket resmi telah aktif.' 
       : 'Pembayaran ditolak dan kuota tiket telah dikembalikan ke sistem.' 
+  });
+});
+
+// Layanan Super Admin Menginput Pesanan & Pembayaran Tiket Secara Manual (Blueprint v3)
+app.post('/api/admin/manual-order', async (req: Request, res: Response) => {
+  const {
+    eventId,
+    tierId,
+    quantity = 1,
+    buyerName,
+    buyerEmail,
+    buyerPhone,
+    paymentMethod = 'transfer_manual',
+    paymentChannel = 'Transfer Bank BCA (888-019-2831)',
+    selectedBankId,
+    senderBank,
+    senderAccountName,
+    paymentReference,
+    transferNotes,
+    isPaidImmediate = true,
+    verifiedBy = 'Super Admin Pusat',
+  } = req.body;
+
+  if (!eventId || !tierId || !buyerName || !buyerEmail) {
+    return res.status(400).json({ success: false, message: 'Event, kategori tiket, nama pembeli, dan email wajib diisi.' });
+  }
+
+  const event = memoryEvents.find(e => e.id === eventId);
+  if (!event) {
+    return res.status(404).json({ success: false, message: 'Event tidak ditemukan.' });
+  }
+
+  const tier = event.tickets.find(t => t.id === tierId);
+  if (!tier) {
+    return res.status(404).json({ success: false, message: 'Kategori tiket tidak ditemukan.' });
+  }
+
+  const qty = Math.max(1, Number(quantity) || 1);
+  const basePricePerTicket = Number(tier.price) || 0;
+  const isFree = basePricePerTicket === 0;
+  const subtotal = basePricePerTicket * qty;
+  const platformFee = isFree ? 0 : 2000; // Flat Rp 2.000 per transaksi (Blueprint v3)
+  const totalAmount = subtotal + platformFee;
+
+  // Blueprint v3 Split Fee:
+  // 1. Total Bayar User = Harga Tiket Asli + Rp 2.000 (Biaya Admin)
+  // 2. Komisi Platform = 2% × Harga Tiket Asli
+  // 3. Pendapatan Bersih Kreator = Harga Tiket Asli - Komisi Platform
+  // 4. Total Pendapatan Platform = Rp 2.000 (dari User) + Komisi Platform (dari Kreator)
+  const hargaTiketAsli = subtotal;
+  const potonganKreator = isFree ? 0 : Math.round(0.02 * hargaTiketAsli);
+  const netPendapatanKreator = isFree ? 0 : Math.max(0, hargaTiketAsli - potonganKreator);
+  const totalMarginPlatform = isFree ? 0 : (platformFee + potonganKreator);
+
+  const orderId = `ord-adm-${Date.now()}`;
+  const orderNumber = `CE-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const nowIso = new Date().toISOString();
+  const paymentStatus = isPaidImmediate || isFree ? 'paid' : 'pending_manual_verification';
+
+  // Generate individual tickets with QR codes
+  const generatedTickets: Ticket[] = [];
+  for (let i = 0; i < qty; i++) {
+    const ticketId = `tkt-adm-${Date.now()}-${i}-${Math.floor(100 + Math.random() * 900)}`;
+    const randomHex = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0').toUpperCase();
+    const cleanPrefix = (event.title || 'EVT').replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase();
+    const ticketCode = `CE-${cleanPrefix}-${(Date.now() % 10000).toString().padStart(4, '0')}-${randomHex}`;
+    const qrPayload = `CELEBES:VERIFY:${ticketCode}:${eventId}:${buyerEmail}`;
+
+    generatedTickets.push({
+      id: ticketId,
+      orderId,
+      eventId,
+      eventTitle: event.title,
+      tierId,
+      tierName: tier.name,
+      ticketCode,
+      qrPayload,
+      attendeeName: qty === 1 ? buyerName : `${buyerName} (${i + 1})`,
+      attendeeEmail: buyerEmail,
+      checkInStatus: 'not_checked_in',
+      createdAt: nowIso,
+    });
+  }
+
+  const newOrder: Order = {
+    id: orderId,
+    orderNumber,
+    userId: 'usr-admin-bergulir',
+    eventId,
+    eventTitle: event.title,
+    buyerName,
+    buyerEmail,
+    buyerPhone: buyerPhone || '',
+    tickets: generatedTickets,
+    subtotal,
+    discountAmount: 0,
+    platformFee,
+    totalAmount,
+    hargaTiketAsli,
+    biayaAdminUser: platformFee,
+    potonganKreator,
+    netPendapatanKreator,
+    totalMarginPlatform,
+    creatorId: event.creatorId,
+    creatorName: event.creatorName || 'Celebes Creative',
+    paymentType: 'manual',
+    paymentMethod,
+    paymentChannel,
+    paymentStatus,
+    paymentReference: paymentReference || `MANUAL-INPUT-ADMIN-${Date.now()}`,
+    senderBank: senderBank || (paymentMethod.includes('cash') ? 'Tunai Kasir' : 'Transfer Manual'),
+    senderAccountName: senderAccountName || buyerName,
+    transferNotes: transferNotes || `Input Manual Super Admin (${verifiedBy})`,
+    verifiedBy: paymentStatus === 'paid' ? verifiedBy : undefined,
+    verifiedAt: paymentStatus === 'paid' ? nowIso : undefined,
+    paidAt: paymentStatus === 'paid' ? nowIso : undefined,
+    createdAt: nowIso,
+  };
+
+  // Update tier sold count in memory
+  tier.soldCount = (tier.soldCount || 0) + qty;
+
+  // Credit creator wallet balance if marked paid
+  if (paymentStatus === 'paid') {
+    const creator = memoryUsers.find(u => u.id === event.creatorId || u.name === event.creatorName);
+    if (creator) {
+      creator.walletBalance = (creator.walletBalance || 0) + netPendapatanKreator;
+    }
+    const payEmail = logPaymentSuccessEmail(newOrder);
+    memorySentEmails.unshift(payEmail);
+    console.log(`[Midtrans Centralized Sync] Transaksi manual admin ${orderNumber} dicatat lunas. Gross Rp ${totalAmount}, Net Kreator Rp ${netPendapatanKreator}, Margin Platform Rp ${totalMarginPlatform}`);
+  }
+
+  memoryOrders.unshift(newOrder);
+  saveLocalData();
+
+  if (isMysqlActive && mysqlPool) {
+    try {
+      await (mysqlPool as any).execute(
+        `INSERT INTO orders (id, order_number, user_id, event_id, buyer_name, buyer_email, buyer_phone, subtotal, discount_amount, platform_fee, total_amount, payment_type, payment_method, payment_channel, payment_status, payment_reference, sender_bank, sender_account_name, transfer_notes, verified_by, verified_at, paid_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          orderNumber,
+          newOrder.userId,
+          newOrder.eventId,
+          newOrder.buyerName,
+          newOrder.buyerEmail,
+          newOrder.buyerPhone,
+          newOrder.subtotal,
+          0,
+          newOrder.platformFee,
+          newOrder.totalAmount,
+          'manual',
+          newOrder.paymentMethod,
+          newOrder.paymentChannel,
+          newOrder.paymentStatus,
+          newOrder.paymentReference,
+          newOrder.senderBank,
+          newOrder.senderAccountName,
+          newOrder.transferNotes,
+          newOrder.verifiedBy || null,
+          newOrder.verifiedAt ? toMysqlDatetime(newOrder.verifiedAt) : null,
+          newOrder.paidAt ? toMysqlDatetime(newOrder.paidAt) : null,
+        ]
+      );
+
+      for (const t of generatedTickets) {
+        await (mysqlPool as any).execute(
+          `INSERT INTO tickets (id, order_id, event_id, tier_id, ticket_code, qr_payload, attendee_name, attendee_email, check_in_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, orderId, eventId, tierId, t.ticketCode, t.qrPayload, t.attendeeName, t.attendeeEmail, 'not_checked_in']
+        );
+      }
+
+      await (mysqlPool as any).execute(
+        `UPDATE ticket_tiers SET sold_count = sold_count + ? WHERE id = ?`,
+        [qty, tierId]
+      );
+
+      if (paymentStatus === 'paid' && event.creatorId) {
+        await (mysqlPool as any).execute(
+          `UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + ? WHERE id = ?`,
+          [netPendapatanKreator, event.creatorId]
+        ).catch(() => {});
+      }
+    } catch (err: any) {
+      console.warn('[Database] Gagal insert admin manual order di MySQL:', err.message);
+    }
+  }
+
+  res.status(201).json({
+    success: true,
+    order: newOrder,
+    message: paymentStatus === 'paid'
+      ? `Transaksi manual ${orderNumber} berhasil dicatat sebagai LUNAS. E-Tiket diterbitkan dan saldo bersih Rp ${netPendapatanKreator.toLocaleString('id-ID')} masuk ke kreator.`
+      : `Transaksi manual ${orderNumber} berhasil dicatat dan masuk ke antrean verifikasi manual.`,
   });
 });
 
@@ -2328,6 +2534,13 @@ app.put('/api/settings', async (req: Request, res: Response) => {
             [k, String(val)]
           );
         }
+      }
+
+      if (newSettings.manualBankAccounts && Array.isArray(newSettings.manualBankAccounts)) {
+        await mysqlPool.execute(
+          `INSERT INTO system_settings (setting_key, setting_value) VALUES ('manual_bank_accounts', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+          [JSON.stringify(newSettings.manualBankAccounts)]
+        );
       }
     } catch (err: any) {
       console.warn('[Database] Gagal update system_settings di MySQL:', err.message);

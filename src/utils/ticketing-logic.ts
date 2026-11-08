@@ -25,6 +25,8 @@ export interface SplitFeeBreakdown {
   totalBayarUser: number; // hargaTiketAsli + biayaAdminUser
   potonganKreator: number; // 2% × hargaTiketAsli
   pendapatanBersihKreator: number; // hargaTiketAsli - potonganKreator
+  komisiPlatformKreator?: number; // Alias for potonganKreator
+  netPendapatanKreator?: number; // Alias for pendapatanBersihKreator
   totalMarginPlatform: number; // biayaAdminUser + potonganKreator
 }
 
@@ -91,6 +93,8 @@ export function calculateHybridSplitFee(
       totalBayarUser: 0,
       potonganKreator: 0,
       pendapatanBersihKreator: 0,
+      komisiPlatformKreator: 0,
+      netPendapatanKreator: 0,
       totalMarginPlatform: 0,
     };
   }
@@ -107,6 +111,8 @@ export function calculateHybridSplitFee(
     totalBayarUser,
     potonganKreator,
     pendapatanBersihKreator,
+    komisiPlatformKreator: potonganKreator,
+    netPendapatanKreator: pendapatanBersihKreator,
     totalMarginPlatform,
   };
 }
