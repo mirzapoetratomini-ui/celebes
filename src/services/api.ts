@@ -1,5 +1,5 @@
-import { EventItem, Order, PayoutRequest, Ticket, Voucher, DatabaseStatus, User, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification } from '../types';
-import { DEFAULT_PLATFORM_SETTINGS } from '../data/seedData';
+import { EventItem, Order, PayoutRequest, Ticket, Voucher, DatabaseStatus, User, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink } from '../types';
+import { DEFAULT_PLATFORM_SETTINGS, INITIAL_NATIONAL_EVENTS } from '../data/seedData';
 
 export const api = {
   // Database status
@@ -325,4 +325,53 @@ export const api = {
       return [];
     }
   },
+
+  // National Events (Info Event Indonesia yang bisa ikut dipublish kelolaan Super Admin)
+  async getNationalEvents(all = false): Promise<NationalEventLink[]> {
+    try {
+      const res = await fetch(`/api/national-events${all ? '?all=true' : ''}`);
+      if (!res.ok) throw new Error('Gagal memuat event nasional');
+      const data = await res.json();
+      return Array.isArray(data) ? data : INITIAL_NATIONAL_EVENTS;
+    } catch {
+      return INITIAL_NATIONAL_EVENTS;
+    }
+  },
+
+  async createNationalEvent(data: Partial<NationalEventLink>): Promise<NationalEventLink> {
+    const res = await fetch('/api/national-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Gagal menambahkan link event nasional');
+    return await res.json();
+  },
+
+  async updateNationalEvent(id: string, data: Partial<NationalEventLink>): Promise<NationalEventLink> {
+    const res = await fetch(`/api/national-events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Gagal memperbarui link event nasional');
+    return await res.json();
+  },
+
+  async deleteNationalEvent(id: string): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/national-events/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Gagal menghapus event nasional');
+    return await res.json();
+  },
+
+  async toggleNationalEvent(id: string): Promise<NationalEventLink> {
+    const res = await fetch(`/api/national-events/${id}/toggle`, {
+      method: 'PATCH',
+    });
+    if (!res.ok) throw new Error('Gagal mengubah status publikasi event nasional');
+    return await res.json();
+  },
 };
+

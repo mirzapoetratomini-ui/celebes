@@ -12,22 +12,59 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      // Asset loading failure listener (catches 404s, MIME errors, or broken script tags)
+      window.__assetErrors = [];
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          var src = e.target.src || e.target.href || 'Unknown Asset';
+          console.error('[Celebes Asset Error]', src);
+          window.__assetErrors.push(src);
+          var errBox = document.getElementById('loading-error-box');
+          var errList = document.getElementById('loading-error-list');
+          if (errBox && errList) {
+            errBox.style.display = 'block';
+            errList.innerHTML += '<div style="font-family: monospace; font-size: 11px; word-break: break-all; margin-top: 4px; color: #dc2626;">• ' + src + '</div>';
+          }
+        }
+      }, true);
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
     <div id="root">
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f172a; text-align: center; padding: 20px;">
-        <div style="width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px;"></div>
-        <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700;">Memuat Celebes Event...</h3>
+      <div id="main-loading-container" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f172a; text-align: center; padding: 20px;">
+        <div id="main-loading-spinner" style="width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px;"></div>
+        <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: #0f172a;">Memuat Celebes Event...</h3>
         <p style="margin: 0; font-size: 13px; color: #64748b;">Menyiapkan platform tiket dan event digital Sulawesi</p>
-        <div id="loading-timeout-msg" style="display: none; margin-top: 20px; max-width: 420px; font-size: 13px; color: #b91c1c; background: #fff1f2; border: 1px solid #fecdd3; padding: 14px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-          <p style="margin: 0 0 6px 0; font-weight: 700; color: #9f1239;">Memuat berlangsung cukup lama...</p>
-          <p style="margin: 0 0 10px 0; color: #475569; font-size: 12px; line-height: 1.5;">Pastikan folder <code>dist/assets</code> sudah lengkap di hosting cPanel, atau coba lakukan Hard Refresh browser.</p>
-          <button onclick="window.location.reload(true)" style="background: #2563eb; color: #fff; border: none; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Muat Ulang Halaman (Ctrl + F5)</button>
+        
+        <!-- Error box if asset file failed to load -->
+        <div id="loading-error-box" style="display: none; margin-top: 20px; max-width: 440px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; text-align: left; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div style="font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 4px;">⚠️ Terjadi Gangguan Pemuatan Aset</div>
+          <div style="font-size: 12px; color: #7f1d1d; margin-bottom: 8px;">Browser gagal memuat berkas frontend berikut:</div>
+          <div id="loading-error-list"></div>
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="window.location.reload(true)" style="background: #dc2626; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Segarkan (Ctrl + F5)</button>
+            <button onclick="window.location.href = window.location.pathname + '?nocache=' + Date.now()" style="background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Bypass Cache</button>
+          </div>
         </div>
+
+        <!-- Timeout notice if loading takes longer than 3 seconds -->
+        <div id="loading-timeout-msg" style="display: none; margin-top: 20px; max-width: 440px; font-size: 13px; color: #334155; background: #ffffff; border: 1px solid #e2e8f0; padding: 18px; border-radius: 14px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+          <p style="margin: 0 0 6px 0; font-weight: 700; color: #0f172a; font-size: 14px;">Sedang Menghubungkan ke Server...</p>
+          <p style="margin: 0 0 14px 0; color: #64748b; font-size: 12px; line-height: 1.5;">Jika tampilan beranda tidak kunjung terbuka, silakan gunakan tombol di bawah untuk memuat ulang atau bersihkan cache browser.</p>
+          <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            <button onclick="window.location.href = window.location.pathname + '?v=' + Date.now()" style="background: #2563eb; color: #fff; border: none; padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">Segarkan Halaman (Bypass Cache)</button>
+            <button onclick="try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}; window.location.reload();" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer;">Reset Cache Sesi</button>
+          </div>
+        </div>
+
         <script>
           setTimeout(function() {
-            var el = document.getElementById('loading-timeout-msg');
-            if (el) el.style.display = 'block';
+            var timeoutEl = document.getElementById('loading-timeout-msg');
+            var spinnerEl = document.getElementById('main-loading-spinner');
+            if (timeoutEl && spinnerEl) {
+              timeoutEl.style.display = 'block';
+            }
           }, 3500);
         </script>
         <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>

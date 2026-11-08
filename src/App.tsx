@@ -97,20 +97,37 @@ export default function App() {
   // Load server data with fallback
   const refreshAllData = async () => {
     try {
-      const [fetchedEvents, fetchedOrders, fetchedPayouts, fetchedUsers, fetchedSettings] = await Promise.all([
+      const [
+        eventsResult,
+        ordersResult,
+        payoutsResult,
+        usersResult,
+        settingsResult
+      ] = await Promise.allSettled([
         api.getEvents(),
         api.getOrders(),
         api.getPayouts(),
         api.getUsers(),
         api.getSettings(),
       ]);
-      setEvents(fetchedEvents);
-      setOrders(fetchedOrders);
-      setPayouts(fetchedPayouts);
-      setUsers(fetchedUsers);
-      if (fetchedSettings) setPlatformSettings(fetchedSettings);
-    } catch {
-      // Keep initial fallback
+
+      if (eventsResult.status === 'fulfilled' && Array.isArray(eventsResult.value)) {
+        setEvents(eventsResult.value);
+      }
+      if (ordersResult.status === 'fulfilled' && Array.isArray(ordersResult.value)) {
+        setOrders(ordersResult.value);
+      }
+      if (payoutsResult.status === 'fulfilled' && Array.isArray(payoutsResult.value)) {
+        setPayouts(payoutsResult.value);
+      }
+      if (usersResult.status === 'fulfilled' && Array.isArray(usersResult.value)) {
+        setUsers(usersResult.value);
+      }
+      if (settingsResult.status === 'fulfilled' && settingsResult.value) {
+        setPlatformSettings(settingsResult.value);
+      }
+    } catch (err) {
+      console.warn('[Celebes Data Sync] Gagal memperbarui data:', err);
     }
   };
 

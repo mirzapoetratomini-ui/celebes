@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS `support_tickets`;
 DROP TABLE IF EXISTS `faqs`;
 DROP TABLE IF EXISTS `system_settings`;
 DROP TABLE IF EXISTS `email_notifications`;
+DROP TABLE IF EXISTS `national_events`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ------------------------------------------------------------
@@ -381,3 +382,37 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES
 -- 12. Email Notifications Log
 INSERT INTO `email_notifications` (`id`, `recipient_email`, `recipient_name`, `subject`, `body_html`, `sent_at`, `status`, `type`, `user_id`) VALUES
 ('notif-001', 'kreator@celebescreative.id', 'Celebes Creative Promosindo', 'Selamat! Akun Kreator Anda Telah Disetujui - Celebes Event', '<p>Selamat! Akun Kreator Anda di Celebes Event telah disetujui oleh Super Admin.</p>', NOW(), 'sent', 'creator_approval', 'usr-creator-01');
+
+-- ------------------------------------------------------------
+-- Table 13: national_events (Info Event Indonesia yang bisa ikut dipublish, dikelola Super Admin)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `national_events` (
+  `id` VARCHAR(64) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `province` VARCHAR(100) NOT NULL,
+  `city` VARCHAR(100) NOT NULL,
+  `category` VARCHAR(100) NOT NULL,
+  `organizer` VARCHAR(255) NOT NULL,
+  `event_date` VARCHAR(100) NOT NULL,
+  `banner_url` TEXT NOT NULL,
+  `external_url` TEXT NOT NULL,
+  `cta_label` VARCHAR(100) DEFAULT 'Buka Link Publikasi Resmi',
+  `badge` VARCHAR(100) DEFAULT 'Bisa Ikut Publikasi',
+  `description` TEXT,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `order_index` INT DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_nat_events_active` (`is_active`),
+  KEY `idx_nat_events_prov` (`province`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 13. Initial National Events Seed Data
+INSERT INTO `national_events` (`id`, `title`, `province`, `city`, `category`, `organizer`, `event_date`, `banner_url`, `external_url`, `cta_label`, `badge`, `description`, `is_active`, `order_index`, `created_at`) VALUES
+('nat-ev-01', 'Jakarta International Sound & Creative Expo (JISCE 2026)', 'DKI Jakarta', 'Jakarta Pusat (JIExpo Kemayoran)', 'Festival Musik & Hiburan', 'Asosiasi Promotor & Pengusaha Panggung Indonesia', '24 - 26 Juli 2026', 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/jisce-jakarta-2026', 'Buka Link Publikasi Resmi', 'Bisa Ikut Publikasi', 'Pameran industri musik, tata suara, panggung festival terbesar di Asia Tenggara. Promotor dan EO daerah dapat bergabung dalam jejaring publikasi tiket serentak nusantara.', 1, 1, NOW()),
+('nat-ev-02', 'Bali Creative & Tech Nomad Summit 2026', 'Bali', 'Badung / Nusa Dua', 'Teknologi & Bisnis', 'Bali Creative Hub & Global Tech Partners', '14 - 16 Agustus 2026', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/bali-tech-summit-2026', 'Ikut Kemitraan Publikasi', 'Call for Partners', 'Pertemuan 2.500+ founder startup, digital nomad, dan kreator konten dunia di Bali. Pendaftaran slot co-host dan jalur distribusi tiket terbuka untuk mitra seluruh Indonesia.', 1, 2, NOW()),
+('nat-ev-03', 'Borobudur Heritage Cultural Run & Festival 2026', 'Jawa Tengah', 'Magelang / Candi Borobudur', 'Olahraga & Fun Run', 'Yayasan Warisan Candi & Komite Olahraga Pariwisata', '6 September 2026', 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/borobudur-run-2026', 'Lihat Info & Tiket Resmi', 'Bisa Ikut Publikasi', 'Lari maraton 10K & 21K mengitari keindahan candi bersejarah Borobudur dan perdesaan asri. Menerima publikasi kolaborasi komunitas lari dan agen tiket se-Indonesia.', 1, 3, NOW()),
+('nat-ev-04', 'Makassar International Eight Festival (F8 Celebes) 2026', 'Sulawesi Selatan', 'Makassar (Anjungan Pantai Losari)', 'Budaya & Kuliner', 'Dinas Pariwisata Makassar & PT Festival Delapan', '23 - 27 September 2026', 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/f8-makassar-celebes', 'Buka Link Publikasi Resmi', 'Featured Nasional', 'Festival akbar 8 unsur seni dan budaya (Fashion, Film, Food, Folk, Fine Art, Flora Fauna, Fusion Music, Fiction Writer) pesisir Sulawesi Selatan bertaraf internasional.', 1, 4, NOW()),
+('nat-ev-05', 'Bandung Indie Creative Week & Fashion Circuit 2026', 'Jawa Barat', 'Bandung (Area Gedung Sate / Gasibu)', 'Pameran & Expo', 'Kolektif Kreatif Priangan Nusantara', '10 - 12 Oktober 2026', 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/bandung-creative-week', 'Daftar Jejaring Promosi', 'Bisa Ikut Publikasi', 'Eksibisi karya desainer lokal, distro fashion, dan pertunjukan band indie nusantara. Komunitas kreatif dari luar Jawa dapat berpartisipasi dalam slot publikasi bersama.', 1, 5, NOW()),
+('nat-ev-06', 'Nusantara Borneo Future Green Expo 2026', 'Kalimantan Timur', 'Balikpapan & Kawasan IKN', 'Pendidikan & Seminar', 'Dewan Pemuda Nusantara & Mitra Industri Hijau', '7 - 9 November 2026', 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80', 'https://event.bergulir.com/publish/borneo-green-expo', 'Buka Tautan Resmi', 'Kemitraan Terbuka', 'Forum pemuda dan inovator transisi energi ramah lingkungan pulau Kalimantan dan kawasan ibu kota nusantara. Terbuka kerjasama publikasi delegasi organisasi se-Indonesia.', 1, 6, NOW());
+

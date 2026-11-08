@@ -320,3 +320,22 @@ export interface SentEmailNotification {
   sender: string;
 }
 
+export interface NationalEventLink {
+  id: string;
+  title: string;
+  province: string;
+  city: string;
+  category: string;
+  organizer: string;
+  eventDate: string;
+  bannerUrl: string;
+  externalUrl: string;
+  ctaLabel: string;
+  badge: string;
+  description: string;
+  isActive: boolean;
+  orderIndex: number;
+  createdAt: string;
+}
+
+

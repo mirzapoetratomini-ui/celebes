@@ -48139,16 +48139,6 @@ function verifyAndCheckInTicket(ticket, nowIso = (/* @__PURE__ */ new Date()).to
 
 // server.ts
 import { fileURLToPath } from "url";
-import_dotenv.default.config();
-var PORT = process.env.NODE_ENV === "production" && process.env.PORT ? Number(process.env.PORT) || 3e3 : 3e3;
-var isProduction = process.env.NODE_ENV === "production";
-var app = (0, import_express.default)();
-process.on("uncaughtException", (err) => {
-  console.error("[Process] Uncaught exception:", err);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error("[Process] Unhandled rejection:", reason);
-});
 var detectedDir = process.cwd();
 try {
   if (typeof __dirname !== "undefined") {
@@ -48160,6 +48150,29 @@ try {
   detectedDir = process.cwd();
 }
 var APP_ROOT = process.env.PASSENGER_APP_ROOT || detectedDir || process.cwd();
+var candidateEnvFiles = [
+  path.resolve(APP_ROOT, ".env"),
+  path.resolve(detectedDir, ".env"),
+  path.resolve(process.cwd(), ".env"),
+  path.resolve("./.env")
+];
+for (const envFile of candidateEnvFiles) {
+  if (fs.existsSync(envFile)) {
+    import_dotenv.default.config({ path: envFile });
+  }
+}
+import_dotenv.default.config();
+var isBundledServer = typeof __filename !== "undefined" && (__filename.endsWith("server.js") || __filename.endsWith("server.cjs"));
+var isPassenger = Boolean(process.env.PASSENGER_APP_ROOT || process.env.IS_HOSTING);
+var isProduction = process.env.NODE_ENV === "production" || isBundledServer || isPassenger;
+var PORT = isProduction && process.env.PORT ? Number(process.env.PORT) || 3e3 : 3e3;
+var app = (0, import_express.default)();
+process.on("uncaughtException", (err) => {
+  console.error("[Process] Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[Process] Unhandled rejection:", reason);
+});
 app.use(import_express.default.json({ limit: "10mb" }));
 app.use(import_express.default.urlencoded({ extended: true, limit: "10mb" }));
 app.use(import_express.default.static(path.resolve(APP_ROOT, "public")));
@@ -48287,6 +48300,11 @@ var mysqlPool = null;
 var isMysqlActive = false;
 var mysqlLastError = "";
 async function initMysql() {
+  for (const envFile of candidateEnvFiles) {
+    if (fs.existsSync(envFile)) {
+      import_dotenv.default.config({ path: envFile, override: true });
+    }
+  }
   const host = process.env.MYSQL_HOST;
   const user = process.env.MYSQL_USER;
   const database = process.env.MYSQL_DATABASE;
@@ -48303,7 +48321,7 @@ async function initMysql() {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 4e3
+        connectTimeout: 5e3
       });
       const connection = await pool.getConnection();
       await connection.ping();
@@ -48322,12 +48340,17 @@ async function initMysql() {
       mysqlPool = null;
       isMysqlActive = false;
       mysqlLastError = err?.message || "Gagal terhubung ke MySQL";
-      console.warn(`[Database] MySQL tidak aktif atau belum siap (${mysqlLastError}). Menggunakan penyimpanan in-memory yang stabil.`);
+      console.warn(`[Database] MySQL tidak aktif atau belum siap (${mysqlLastError}). Menggunakan penyimpanan in-memory.`);
     }
   } else {
     isMysqlActive = false;
     mysqlLastError = "Variabel environment MYSQL_HOST belum disetel. Berjalan dalam mode Local In-Memory.";
   }
+}
+async function ensureMysql() {
+  if (isMysqlActive && mysqlPool) return true;
+  await initMysql();
+  return isMysqlActive;
 }
 initMysql();
 function toMysqlDatetime(isoOrDateStr) {
@@ -48337,6 +48360,7 @@ function toMysqlDatetime(isoOrDateStr) {
   return d.toISOString().slice(0, 19).replace("T", " ");
 }
 async function getUsersFromDb() {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows] = await mysqlPool.query(`SELECT * FROM users ORDER BY created_at DESC`);
@@ -48365,6 +48389,7 @@ async function getUsersFromDb() {
   return memoryUsers;
 }
 async function getEventsFromDb(params) {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `
@@ -48481,6 +48506,7 @@ async function getEventsFromDb(params) {
   return results;
 }
 async function getOrdersFromDb(userId, eventId) {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `SELECT * FROM orders WHERE 1=1`;
@@ -48570,6 +48596,7 @@ async function getOrdersFromDb(userId, eventId) {
   return results;
 }
 async function getVouchersFromDb() {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows] = await mysqlPool.query(`SELECT * FROM vouchers ORDER BY id ASC`);
@@ -48593,6 +48620,7 @@ async function getVouchersFromDb() {
   return memoryVouchers;
 }
 async function getPayoutsFromDb(creatorId) {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `
@@ -48635,6 +48663,7 @@ async function getPayoutsFromDb(creatorId) {
   return results;
 }
 async function getSettingsFromDb() {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows] = await mysqlPool.query(`SELECT * FROM system_settings`);
@@ -48661,6 +48690,7 @@ async function getSettingsFromDb() {
   return memorySettings;
 }
 async function getSupportTicketsFromDb(status, email) {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `SELECT * FROM support_tickets WHERE 1=1`;
@@ -48701,6 +48731,7 @@ async function getSupportTicketsFromDb(status, email) {
   return results;
 }
 async function getFaqsFromDb() {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows] = await mysqlPool.query(`SELECT * FROM faqs ORDER BY id ASC`);
@@ -48718,7 +48749,17 @@ async function getFaqsFromDb() {
   }
   return memoryFaqs;
 }
+app.get("/api/health", async (_req, res) => {
+  await ensureMysql();
+  res.json({
+    status: "ok",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    mysql: isMysqlActive ? "connected" : "disconnected",
+    database: process.env.MYSQL_DATABASE || null
+  });
+});
 app.get("/api/db-status", async (_req, res) => {
+  await ensureMysql();
   let latency = 0;
   let tableCounts = {
     users: memoryUsers.length,
@@ -49634,6 +49675,53 @@ app.post("/api/faqs", async (req, res) => {
   res.status(201).json(newFaq);
 });
 async function startServer() {
+  const candidateDistPaths = [
+    path.resolve(APP_ROOT, "dist"),
+    path.resolve(detectedDir, "dist"),
+    path.resolve(process.cwd(), "dist"),
+    path.resolve("./dist")
+  ];
+  const distPath = candidateDistPaths.find((p) => fs.existsSync(path.resolve(p, "index.html"))) || candidateDistPaths[0];
+  const assetCandidateDirs = [
+    path.resolve(distPath, "assets"),
+    path.resolve(APP_ROOT, "dist", "assets"),
+    path.resolve(detectedDir, "dist", "assets"),
+    path.resolve(APP_ROOT, "assets"),
+    path.resolve(detectedDir, "assets"),
+    path.resolve(process.cwd(), "assets"),
+    path.resolve(APP_ROOT, "public", "assets")
+  ];
+  for (const dir of assetCandidateDirs) {
+    if (fs.existsSync(dir)) {
+      app.use("/assets", import_express.default.static(dir, {
+        maxAge: "1y",
+        immutable: true,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith(".js")) {
+            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+          } else if (filePath.endsWith(".css")) {
+            res.setHeader("Content-Type", "text/css; charset=utf-8");
+          }
+        }
+      }));
+    }
+  }
+  app.get("/assets/:file", (req, res, next) => {
+    const fileName = path.basename(req.params.file);
+    for (const dir of assetCandidateDirs) {
+      const fullPath = path.resolve(dir, fileName);
+      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+        if (fileName.endsWith(".js")) {
+          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        } else if (fileName.endsWith(".css")) {
+          res.setHeader("Content-Type", "text/css; charset=utf-8");
+        }
+        return res.sendFile(fullPath);
+      }
+    }
+    console.warn(`[Static] Asset tidak ditemukan di direktori manapun: ${fileName}`);
+    res.status(404).type("text/plain").send(`Asset ${fileName} not found`);
+  });
   if (!isProduction) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -49645,44 +49733,13 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const candidateDistPaths = [
-      path.resolve(APP_ROOT, "dist"),
-      path.resolve(detectedDir, "dist"),
-      path.resolve(process.cwd(), "dist"),
-      path.resolve("./dist")
-    ];
-    const distPath = candidateDistPaths.find((p) => fs.existsSync(path.resolve(p, "index.html"))) || candidateDistPaths[0];
     app.use(import_express.default.static(distPath));
-    const assetCandidateDirs = [
-      path.resolve(distPath, "assets"),
-      path.resolve(APP_ROOT, "dist", "assets"),
-      path.resolve(detectedDir, "dist", "assets"),
-      path.resolve(APP_ROOT, "assets"),
-      path.resolve(detectedDir, "assets"),
-      path.resolve(process.cwd(), "assets"),
-      path.resolve(APP_ROOT, "public", "assets")
-    ];
-    for (const dir of assetCandidateDirs) {
-      if (fs.existsSync(dir)) {
-        app.use("/assets", import_express.default.static(dir, {
-          maxAge: "1d",
-          setHeaders: (res, filePath) => {
-            if (filePath.endsWith(".js")) {
-              res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-            } else if (filePath.endsWith(".css")) {
-              res.setHeader("Content-Type", "text/css; charset=utf-8");
-            }
-          }
-        }));
-      }
-    }
-    app.use("/assets", (req, res) => {
-      console.warn(`[Static] Asset tidak ditemukan: ${req.originalUrl}`);
-      res.status(404).type("text/plain").send("Asset not found");
-    });
     app.get("*", (_req, res) => {
       const indexPath = path.resolve(distPath, "index.html");
       if (fs.existsSync(indexPath)) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         res.sendFile(indexPath);
       } else {
         res.status(200).send(`

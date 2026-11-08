@@ -3,26 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
-import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_VOUCHERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_SUPPORT_TICKETS, INITIAL_FAQS, INITIAL_SENT_EMAILS } from './src/data/seedData';
-import { EventItem, Order, User, Voucher, PayoutRequest, Ticket, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification } from './src/types';
+import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_VOUCHERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_SUPPORT_TICKETS, INITIAL_FAQS, INITIAL_SENT_EMAILS, INITIAL_NATIONAL_EVENTS } from './src/data/seedData';
+import { EventItem, Order, User, Voucher, PayoutRequest, Ticket, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink } from './src/types';
 import { verifyAndCheckInTicket } from './src/utils/ticketing-logic';
-
-dotenv.config();
-
-// Port 3000 in AI Studio / dev mode, or process.env.PORT when deployed in production hosting
-const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
-  ? (Number(process.env.PORT) || 3000)
-  : 3000;
-const isProduction = process.env.NODE_ENV === 'production';
-const app = express();
-
-process.on('uncaughtException', (err) => {
-  console.error('[Process] Uncaught exception:', err);
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error('[Process] Unhandled rejection:', reason);
-});
 
 import { fileURLToPath } from 'url';
 
@@ -38,6 +21,41 @@ try {
 }
 
 const APP_ROOT = process.env.PASSENGER_APP_ROOT || detectedDir || process.cwd();
+
+// Multi-path .env configuration (essential for cPanel / Passenger environments)
+const candidateEnvFiles = [
+  path.resolve(APP_ROOT, '.env'),
+  path.resolve(detectedDir, '.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve('./.env')
+];
+for (const envFile of candidateEnvFiles) {
+  if (fs.existsSync(envFile)) {
+    dotenv.config({ path: envFile });
+  }
+}
+dotenv.config();
+
+// Auto-detect production mode:
+// 1. Explicit NODE_ENV === 'production'
+// 2. OR running as bundled server.js / server.cjs
+// 3. OR running under cPanel Phusion Passenger
+const isBundledServer = typeof __filename !== 'undefined' && (__filename.endsWith('server.js') || __filename.endsWith('server.cjs'));
+const isPassenger = Boolean(process.env.PASSENGER_APP_ROOT || process.env.IS_HOSTING);
+const isProduction = process.env.NODE_ENV === 'production' || isBundledServer || isPassenger;
+
+const PORT = isProduction && process.env.PORT
+  ? (Number(process.env.PORT) || 3000)
+  : 3000;
+const app = express();
+
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Process] Unhandled rejection:', reason);
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -73,6 +91,7 @@ let memorySettings: PlatformSettings = JSON.parse(JSON.stringify(DEFAULT_PLATFOR
 let memorySupportTickets: SupportTicket[] = JSON.parse(JSON.stringify(INITIAL_SUPPORT_TICKETS));
 let memoryFaqs: FaqItem[] = JSON.parse(JSON.stringify(INITIAL_FAQS));
 let memorySentEmails: SentEmailNotification[] = JSON.parse(JSON.stringify(INITIAL_SENT_EMAILS));
+let memoryNationalEvents: NationalEventLink[] = JSON.parse(JSON.stringify(INITIAL_NATIONAL_EVENTS));
 
 function generateCreatorApprovalEmail(user: User): SentEmailNotification {
   return {
@@ -141,6 +160,7 @@ function saveLocalData() {
       supportTickets: memorySupportTickets,
       faqs: memoryFaqs,
       sentEmails: memorySentEmails,
+      nationalEvents: memoryNationalEvents,
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(LOCAL_STORAGE_FILE, JSON.stringify(dataToSave, null, 2), 'utf8');
@@ -163,6 +183,7 @@ function loadLocalData() {
       if (Array.isArray(parsed.supportTickets)) memorySupportTickets = parsed.supportTickets;
       if (Array.isArray(parsed.faqs)) memoryFaqs = parsed.faqs;
       if (Array.isArray(parsed.sentEmails)) memorySentEmails = parsed.sentEmails;
+      if (Array.isArray(parsed.nationalEvents)) memoryNationalEvents = parsed.nationalEvents;
       console.log('[Storage] Data lokal berhasil dimuat dari database/local_data.json');
     }
   } catch (err) {
@@ -178,6 +199,13 @@ let isMysqlActive = false;
 let mysqlLastError = '';
 
 async function initMysql() {
+  // Re-read candidate env files dynamically in case .env was modified in cPanel File Manager
+  for (const envFile of candidateEnvFiles) {
+    if (fs.existsSync(envFile)) {
+      dotenv.config({ path: envFile, override: true });
+    }
+  }
+
   const host = process.env.MYSQL_HOST;
   const user = process.env.MYSQL_USER;
   const database = process.env.MYSQL_DATABASE;
@@ -195,7 +223,7 @@ async function initMysql() {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 4000,
+        connectTimeout: 5000,
       });
 
       const connection = await pool.getConnection();
@@ -212,12 +240,18 @@ async function initMysql() {
       mysqlPool = null;
       isMysqlActive = false;
       mysqlLastError = err?.message || 'Gagal terhubung ke MySQL';
-      console.warn(`[Database] MySQL tidak aktif atau belum siap (${mysqlLastError}). Menggunakan penyimpanan in-memory yang stabil.`);
+      console.warn(`[Database] MySQL tidak aktif atau belum siap (${mysqlLastError}). Menggunakan penyimpanan in-memory.`);
     }
   } else {
     isMysqlActive = false;
     mysqlLastError = 'Variabel environment MYSQL_HOST belum disetel. Berjalan dalam mode Local In-Memory.';
   }
+}
+
+async function ensureMysql(): Promise<boolean> {
+  if (isMysqlActive && mysqlPool) return true;
+  await initMysql();
+  return isMysqlActive;
 }
 
 initMysql();
@@ -235,6 +269,7 @@ function toMysqlDatetime(isoOrDateStr?: string | null): string {
 // ----------------------------------------------------
 
 async function getUsersFromDb(): Promise<User[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows]: any = await mysqlPool.query(`SELECT * FROM users ORDER BY created_at DESC`);
@@ -264,6 +299,7 @@ async function getUsersFromDb(): Promise<User[]> {
 }
 
 async function getEventsFromDb(params?: { category?: string; search?: string; status?: string; creatorId?: string }): Promise<EventItem[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `
@@ -389,6 +425,7 @@ async function getEventsFromDb(params?: { category?: string; search?: string; st
 }
 
 async function getOrdersFromDb(userId?: string, eventId?: string): Promise<Order[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `SELECT * FROM orders WHERE 1=1`;
@@ -486,6 +523,7 @@ async function getOrdersFromDb(userId?: string, eventId?: string): Promise<Order
 }
 
 async function getVouchersFromDb(): Promise<Voucher[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows]: any = await mysqlPool.query(`SELECT * FROM vouchers ORDER BY id ASC`);
@@ -510,6 +548,7 @@ async function getVouchersFromDb(): Promise<Voucher[]> {
 }
 
 async function getPayoutsFromDb(creatorId?: string): Promise<PayoutRequest[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `
@@ -553,6 +592,7 @@ async function getPayoutsFromDb(creatorId?: string): Promise<PayoutRequest[]> {
 }
 
 async function getSettingsFromDb(): Promise<PlatformSettings> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows]: any = await mysqlPool.query(`SELECT * FROM system_settings`);
@@ -580,6 +620,7 @@ async function getSettingsFromDb(): Promise<PlatformSettings> {
 }
 
 async function getSupportTicketsFromDb(status?: string, email?: string): Promise<SupportTicket[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       let sql = `SELECT * FROM support_tickets WHERE 1=1`;
@@ -621,6 +662,7 @@ async function getSupportTicketsFromDb(status?: string, email?: string): Promise
 }
 
 async function getFaqsFromDb(): Promise<FaqItem[]> {
+  await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows]: any = await mysqlPool.query(`SELECT * FROM faqs ORDER BY id ASC`);
@@ -644,7 +686,18 @@ async function getFaqsFromDb(): Promise<FaqItem[]> {
 // ==========================================
 
 // 1. Database Status & Diagnostics
+app.get('/api/health', async (_req: Request, res: Response) => {
+  await ensureMysql();
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    mysql: isMysqlActive ? 'connected' : 'disconnected',
+    database: process.env.MYSQL_DATABASE || null,
+  });
+});
+
 app.get('/api/db-status', async (_req: Request, res: Response) => {
+  await ensureMysql();
   let latency = 0;
   let tableCounts = {
     users: memoryUsers.length,
@@ -1717,6 +1770,59 @@ app.post('/api/faqs', async (req: Request, res: Response) => {
 // ==========================================
 
 async function startServer() {
+  const candidateDistPaths = [
+    path.resolve(APP_ROOT, 'dist'),
+    path.resolve(detectedDir, 'dist'),
+    path.resolve(process.cwd(), 'dist'),
+    path.resolve('./dist')
+  ];
+  const distPath = candidateDistPaths.find(p => fs.existsSync(path.resolve(p, 'index.html'))) || candidateDistPaths[0];
+
+  const assetCandidateDirs = [
+    path.resolve(distPath, 'assets'),
+    path.resolve(APP_ROOT, 'dist', 'assets'),
+    path.resolve(detectedDir, 'dist', 'assets'),
+    path.resolve(APP_ROOT, 'assets'),
+    path.resolve(detectedDir, 'assets'),
+    path.resolve(process.cwd(), 'assets'),
+    path.resolve(APP_ROOT, 'public', 'assets'),
+  ];
+
+  // Dedicated assets router with strict MIME type enforcement
+  for (const dir of assetCandidateDirs) {
+    if (fs.existsSync(dir)) {
+      app.use('/assets', express.static(dir, {
+        maxAge: '1y',
+        immutable: true,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          }
+        }
+      }));
+    }
+  }
+
+  // Fallback explicit asset file resolver (guarantees .js and .css files are NEVER served as index.html)
+  app.get('/assets/:file', (req: Request, res: Response, next) => {
+    const fileName = path.basename(req.params.file);
+    for (const dir of assetCandidateDirs) {
+      const fullPath = path.resolve(dir, fileName);
+      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+        if (fileName.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        } else if (fileName.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+        }
+        return res.sendFile(fullPath);
+      }
+    }
+    console.warn(`[Static] Asset tidak ditemukan di direktori manapun: ${fileName}`);
+    res.status(404).type('text/plain').send(`Asset ${fileName} not found`);
+  });
+
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -1728,52 +1834,15 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const candidateDistPaths = [
-      path.resolve(APP_ROOT, 'dist'),
-      path.resolve(detectedDir, 'dist'),
-      path.resolve(process.cwd(), 'dist'),
-      path.resolve('./dist')
-    ];
-    const distPath = candidateDistPaths.find(p => fs.existsSync(path.resolve(p, 'index.html'))) || candidateDistPaths[0];
-    
-    // Serve static files from distPath
+    // Serve static root files from distPath
     app.use(express.static(distPath));
-
-    // Multiple fallback paths for static assets in cPanel environments
-    const assetCandidateDirs = [
-      path.resolve(distPath, 'assets'),
-      path.resolve(APP_ROOT, 'dist', 'assets'),
-      path.resolve(detectedDir, 'dist', 'assets'),
-      path.resolve(APP_ROOT, 'assets'),
-      path.resolve(detectedDir, 'assets'),
-      path.resolve(process.cwd(), 'assets'),
-      path.resolve(APP_ROOT, 'public', 'assets'),
-    ];
-
-    for (const dir of assetCandidateDirs) {
-      if (fs.existsSync(dir)) {
-        app.use('/assets', express.static(dir, {
-          maxAge: '1d',
-          setHeaders: (res, filePath) => {
-            if (filePath.endsWith('.js')) {
-              res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-            } else if (filePath.endsWith('.css')) {
-              res.setHeader('Content-Type', 'text/css; charset=utf-8');
-            }
-          }
-        }));
-      }
-    }
-
-    // Fallback for missing static assets to prevent returning index.html for .js/.css
-    app.use('/assets', (req: Request, res: Response) => {
-      console.warn(`[Static] Asset tidak ditemukan: ${req.originalUrl}`);
-      res.status(404).type('text/plain').send('Asset not found');
-    });
 
     app.get('*', (_req: Request, res: Response) => {
       const indexPath = path.resolve(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.sendFile(indexPath);
       } else {
         res.status(200).send(`
