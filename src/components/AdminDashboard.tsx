@@ -37,12 +37,14 @@ import {
   Layers,
   Plus,
   Trash2,
-  FileText
+  FileText,
+  Newspaper
 } from 'lucide-react';
 import { EventItem, Order, PayoutRequest, User, DatabaseStatus, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification } from '../types';
 import { DEFAULT_PLATFORM_SETTINGS } from '../data/seedData';
 import { formatRupiah } from '../utils/ticketing-logic';
 import { api } from '../services/api';
+import { AdminNewsManager } from './AdminNewsManager';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -65,7 +67,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   platformSettings,
   onUpdatePlatformSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'users' | 'transactions' | 'manual-payments' | 'payouts' | 'database' | 'settings' | 'qris-api' | 'support-desk'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'users' | 'transactions' | 'manual-payments' | 'payouts' | 'news' | 'database' | 'settings' | 'qris-api' | 'support-desk'>('overview');
   const [dbStatus, setDbStatus] = useState<DatabaseStatus | null>(null);
   const [isLoadingDbStatus, setIsLoadingDbStatus] = useState(false);
 
@@ -573,6 +575,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <DollarSign className="w-4 h-4" />
           <span>Persetujuan Payout ({payouts.filter(p => p.status === 'pending').length} Menunggu)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('news')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'news'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Newspaper className="w-4 h-4" />
+          <span>Berita & Info Event Indonesia</span>
         </button>
 
         <button
@@ -1418,6 +1432,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </table>
           </div>
         </div>
+      )}
+
+      {/* TAB: MANAJEMEN BERITA & LIPUTAN EVENT NASIONAL */}
+      {activeTab === 'news' && (
+        <AdminNewsManager onRefreshData={onRefreshData} />
       )}
 
       {/* TAB: VERIFIKASI PEMBAYARAN MANUAL (SELURUH PLATFORM) */}

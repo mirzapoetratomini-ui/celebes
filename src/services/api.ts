@@ -1,5 +1,5 @@
-import { EventItem, Order, PayoutRequest, Ticket, Voucher, DatabaseStatus, User, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink } from '../types';
-import { DEFAULT_PLATFORM_SETTINGS, INITIAL_NATIONAL_EVENTS } from '../data/seedData';
+import { EventItem, Order, PayoutRequest, Ticket, Voucher, DatabaseStatus, User, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink, EventNews } from '../types';
+import { DEFAULT_PLATFORM_SETTINGS, INITIAL_NATIONAL_EVENTS, INITIAL_EVENT_NEWS } from '../data/seedData';
 
 export const api = {
   // Database status
@@ -371,6 +371,57 @@ export const api = {
       method: 'PATCH',
     });
     if (!res.ok) throw new Error('Gagal mengubah status publikasi event nasional');
+    return await res.json();
+  },
+
+  // 13. Berita & Informasi Event Indonesia (Super Admin Managed)
+  async getNews(category?: string, all = false): Promise<EventNews[]> {
+    try {
+      const q = new URLSearchParams();
+      if (category && category !== 'Semua') q.append('category', category);
+      if (all) q.append('all', 'true');
+      const res = await fetch(`/api/news?${q.toString()}`);
+      if (!res.ok) throw new Error('Gagal mengambil daftar berita');
+      return await res.json();
+    } catch {
+      let filtered = [...INITIAL_EVENT_NEWS];
+      if (!all) filtered = filtered.filter(n => n.status === 'published');
+      if (category && category !== 'Semua') filtered = filtered.filter(n => n.category === category);
+      return filtered;
+    }
+  },
+
+  async getNewsById(idOrSlug: string): Promise<EventNews> {
+    const res = await fetch(`/api/news/${idOrSlug}`);
+    if (!res.ok) throw new Error('Berita tidak ditemukan');
+    return await res.json();
+  },
+
+  async createNews(data: Partial<EventNews>): Promise<EventNews> {
+    const res = await fetch('/api/news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Gagal menerbitkan berita baru');
+    return await res.json();
+  },
+
+  async updateNews(id: string, data: Partial<EventNews>): Promise<EventNews> {
+    const res = await fetch(`/api/news/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Gagal memperbarui berita');
+    return await res.json();
+  },
+
+  async deleteNews(id: string): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/news/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Gagal menghapus berita');
     return await res.json();
   },
 };

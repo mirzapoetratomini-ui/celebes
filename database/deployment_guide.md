@@ -19,55 +19,66 @@ Aplikasi ini dibangun menggunakan **Node.js (Express + React Vite)** dengan duku
 
 ---
 
-## 2. Konfigurasi Environment (`.env`) di Hosting
+## 2. Konfigurasi Environment (`.env`) di Hosting & Sandi Super Admin
 
-Buat file `.env` di root direktori aplikasi hosting Anda:
+Anda dapat mengatur sandi dan email Super Admin langsung dari file `.env` tanpa perlu mengubah kode sumber!
+Buat atau edit file `.env` di direktori aplikasi hosting Anda (melalui cPanel File Manager):
 
 ```env
 PORT=3000
 NODE_ENV=production
 
-# Konfigurasi Koneksi MySQL Hosting:
+# 1. Kredensial Resmi Super Administrator (Bergulir Media)
+# Atur sandi Super Admin yang aman dan rahasia di sini:
+SUPERADMIN_EMAIL=redaksibergulircom@gmail.com
+SUPERADMIN_PASSWORD=Bergulir2026!#
+SUPERADMIN_NAME=Super Admin Bergulir Media
+
+# 2. Konfigurasi Koneksi MySQL Hosting:
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=bergulir_userdb
 MYSQL_PASSWORD=PasswordUserDatabaseAnda123!
 MYSQL_DATABASE=bergulir_celebeseventok
 
-# URL Domain Anda
-APP_URL=https://nama-domain-anda.com
+# 3. URL Domain Anda
+APP_URL=https://event.bergulir.com
 ```
 
 ---
 
-## 3. Langkah Deploy di cPanel (Node.js Selector)
+## 3. Mengatasi Kendala "Gangguan Pemuatan Aset /src/main.tsx" di Hosting
 
-1. Buka menu **Setup Node.js App** di cPanel.
-2. Klik **Create Application**:
-   - **Node.js version**: Pilih versi `18.x`, `20.x`, atau `22.x`.
-   - **Application mode**: `Production`.
-   - **Application root**: `public_html` atau subfolder misal `celebesapp`.
-   - **Application URL**: Pilih domain atau subdomain Anda.
-   - **Application startup file**: `server.ts` atau `dist/server.js`.
-3. Upload seluruh file project (kecuali folder `node_modules` untuk menghemat kuota upload).
-4. Di halaman Setup Node.js App, klik tombol **Run NPM Install**.
-5. Jalankan perintah build:
+Jika saat membuka website muncul pesan:
+> `⚠️ Terjadi Gangguan Pemuatan Aset`
+> `Browser gagal memuat berkas frontend berikut: • https://.../src/main.tsx`
+
+**Penyebabnya:**
+Browser pengguna meminta berkas mentah `/src/main.tsx` karena web server Apache/LiteSpeed di cPanel melayani berkas `index.html` mode pengembangan mentah, atau proses `npm run build` belum dijalankan di cPanel untuk menghasilkan folder `dist/` terkompilasi.
+
+**Solusi Cepat & Permanen:**
+1. **Cara 1 (Rekomendasi via cPanel Terminal):**
+   Masuk ke Terminal cPanel atau SSH, lalu jalankan:
    ```bash
    npm run build
    ```
-6. Klik **Restart Application**. Website Anda langsung online!
+   Perintah ini akan secara otomatis mengkompilasi file frontend React menjadi bundle JavaScript produksi di `dist/` dan `public/`.
+2. **Cara 2 (Gunakan Berkas Siap Tayang):**
+   Pastikan folder `dist/` atau `public/` hasil build ikut diunggah ke direktori hosting Anda.
+3. Berkas `.htaccess` terbaru telah diperbarui dengan aturan pemblokiran otomatis terhadap `/src/*` dan langsung mengarahkan pengunjung ke bundle produksi terkompilasi (`dist/index.html`).
 
 ---
 
-## 4. Akun Resmi Bawaan & Wajib Password
+## 4. Keamanan Akses Super Admin & Beranda Tamu (Guest Mode)
 
-Seluruh login sistem sekarang menerapkan verifikasi keamanan password:
-
-- **Super Admin Utama (Pemilik Pusat)**: `redaksibergulircom@gmail.com` | Password: `Bergulir2026!#`
-- **Super Admin Alternatif**: `admin@celebes-event.com` | Password: `demo123`
-- **Kreator Event Aktif**: `kreator@celebescreative.id` | Password: `kreator123`
-- **Kreator Menunggu Persetujuan (Pending Approval)**: `makassarmusic@gmail.com` | Password: `kreator123`
-- **Peserta / Pendaftar**: `budi.santoso@gmail.com` | Password: `demo123`
+Platform Celebes Event kini dilengkapi proteksi keamanan berlapis:
+1. **Tidak Ada Auto-Login Super Admin**: Saat siapapun membuka alamat beranda utama (`event.bergulir.com`), sistem **SELALU berada dalam mode Tamu / Pengunjung Publik (`guest mode`)**. Akun Super Admin tidak pernah masuk secara otomatis.
+2. **Sesi Tertutup (Session Isolation)**: Sesi Super Admin hanya disimpan di `sessionStorage` (akan otomatis terhapus saat tab atau browser ditutup), tidak tersimpan di `localStorage` publik.
+3. **Autentikasi Sandi Wajib**: Untuk masuk ke Pusat Kendali Super Admin, klik tombol **"Masuk ke Akun"** > masukkan email dan password yang telah Anda tentukan di variabel `.env` (`SUPERADMIN_PASSWORD`).
+4. **Akun Resmi**:
+   - **Super Admin Resmi**: Email dan Sandi dikonfigurasi melalui `.env` (`SUPERADMIN_EMAIL` & `SUPERADMIN_PASSWORD`).
+   - **Kreator Event Demo**: `kreator@celebescreative.id` | Password: `kreator123`
+   - **Peserta / User Demo**: `budi.santoso@gmail.com` | Password: `demo123`
 
 ---
 

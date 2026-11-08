@@ -1,4 +1,4 @@
-import { User, EventItem, Order, Voucher, PayoutRequest, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink } from '../types';
+import { User, EventItem, Order, Voucher, PayoutRequest, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink, EventNews } from '../types';
 
 export const INITIAL_USERS: User[] = [
   {
@@ -16,22 +16,6 @@ export const INITIAL_USERS: User[] = [
     bankAccountNumber: '8880192831',
     bankAccountName: 'BERGULIR MEDIA CELEBES',
     createdAt: '2026-01-01T08:00:00Z',
-  },
-  {
-    id: 'usr-admin-01',
-    email: 'admin@celebes-event.com',
-    name: 'Super Administrator Celebes Event',
-    role: 'admin',
-    password: 'demo123',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
-    phone: '081241129988',
-    organization: 'Celebes Event Platform HQ',
-    auth_provider: 'local',
-    status: 'active',
-    bankName: 'BCA',
-    bankAccountNumber: '8880192831',
-    bankAccountName: 'PT CELEBES EVENT NUSANTARA',
-    createdAt: '2026-01-15T08:00:00Z',
   },
   {
     id: 'usr-creator-01',
@@ -910,6 +894,164 @@ export const INITIAL_NATIONAL_EVENTS: NationalEventLink[] = [
     createdAt: '2026-03-25T13:00:00Z',
   },
 ];
+
+export const INITIAL_EVENT_NEWS: EventNews[] = [
+  {
+    id: 'news-01',
+    title: 'Musim Konser Musik Nasional 2026 Dimulai: Band Papan Atas & Bintang Pop Siap Keliling Sulawesi & Nusantara',
+    slug: 'musim-konser-musik-nasional-2026-keliling-sulawesi',
+    category: 'Event Musik & Konser',
+    summary: 'Deretan festival musik akbar dan tur konser tunggal musisi legendaris tanah air telah merilis kalender resmi untuk paruh kedua tahun 2026. Makassar, Manado, dan Palu masuk daftar kota utama.',
+    content: `Industri pertunjukan musik tanah air kembali menggeliat dengan antusiasme yang luar biasa tinggi pada tahun 2026. Sejumlah promotor musik terkemuka mengumumkan rangkaian tur konser berskala stadion dan panggung festival terbuka yang akan menyambangi berbagai penjuru Indonesia, khususnya kawasan timur yang kian diminati para musisi internasional dan nasional.
+
+Makassar, sebagai episentrum kreatif Sulawesi Selatan, dijadwalkan menjadi tuan rumah sedikitnya 8 festival musik akbar mulai dari genre jazz, pop alternatif, hingga indie-folk. Di antara nama-nama besar yang dipastikan hadir adalah Sheila on 7, Tulus, Raisa, Hindia, Juicy Luicy, serta deretan musisi lokal berprestasi asal Makassar, Bone, dan Toraja.
+
+"Antusiasme publik terhadap konser live saat ini bukan hanya tentang menyaksikan idola mereka, melainkan momentum kebersamaan budaya dan rekreasi keluarga. Platform Celebes Event hadir memastikan akses tiket resmi bebas calo dan verifikasi barcode instan di pintu masuk," ujar koordinator promotor nasional.
+
+Para penggemar musik disarankan untuk memantau pengumuman tiket resmi berkala, memastikan pembayaran dilakukan melalui gerbang QRIS atau transfer terverifikasi resmi, serta menghindari transaksi di luar platform untuk menjamin keaslian e-tiket.`,
+    imageUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
+    author: 'Tim Redaksi Hiburan Celebes Event',
+    authorRole: 'Jurnalis Musik & Hiburan',
+    eventDate: 'Mei - Desember 2026',
+    eventLocation: 'Pantai Losari Makassar, Senayan Jakarta, Lapangan Koni Manado',
+    readTime: '3 menit baca',
+    viewsCount: 3840,
+    isFeatured: true,
+    status: 'published',
+    tags: ['Konser Musik', 'Festival 2026', 'Makassar Live', 'Tiket Konser', 'Celebes Music'],
+    publishedAt: '2026-04-15T09:00:00Z',
+    createdAt: '2026-04-15T09:00:00Z',
+  },
+  {
+    id: 'news-02',
+    title: 'Pocari Sweat Run & Borobudur Marathon 2026 Buka Kuota Tiket: Simak Syarat & Tips Lolos War Tiket',
+    slug: 'marathon-running-indonesia-2026-panduan-registrasi',
+    category: 'Running & Marathon',
+    summary: 'Tren olahraga lari (running) kian masif di tanah air. Simak panduan lengkap pendaftaran kategori 5K, 10K, Half Marathon, dan Full Marathon serta tips persiapan fisik pelari pemula hingga atlet.',
+    content: `Gelombang olahraga lari di Indonesia mencatat rekor partisipasi tertinggi dalam sejarah. Memasuki pertengahan 2026, antusiasme pelari jalan raya (road runner) dan pelari lintas alam (trail runner) terus memuncak menyambut seri kejuaraan bergengsi nasional seperti Pocari Sweat Run Indonesia, Borobudur Marathon, dan Makassar Half Marathon.
+
+Tahun ini, penyelenggara menerapkan sistem registrasi terintegrasi dengan verifikasi identitas resmi dan pembagian slot berbasis ballot serta direct slot bagi pelari kualifikasi. Selain di pulau Jawa, ajang lari di Sulawesi seperti Celebes Coastal Run dan Toraja Ultra Trail juga siap menyambut ribuan pelari dari Sabang sampai Merauke.
+
+Dokter spesialis kedokteran olahraga menyarankan beberapa langkah kunci bagi calon peserta:
+1. Mulailah program latihan bertahap (easy run, long run akhir pekan, dan penguatan otot core).
+2. Perhatikan hidrasi dan nutrisi bernutrisi seimbang jelang hari lomba.
+3. Gunakan sepatu lari yang sesuai dengan bentuk tapak kaki dan telah dipakai adaptasi minimal 30 kilometer.
+4. Segera simpan nomor pendaftaran dan cetak tiket barcode invoice resmi Celebes Event untuk pengambilan paket lomba (Race Pack Collection).
+
+"Lari bukan sekadar kompetisi kecepatan, melainkan perayaan gaya hidup sehat nusantara dan sport tourism yang menggerakkan perekonomian lokal," demikian keterangan panitia pelaksana.`,
+    imageUrl: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80',
+    author: 'Rubrik Olahraga Bergulir Media',
+    authorRole: 'Koresponden Sport Tourism',
+    eventDate: 'Agustus - Oktober 2026',
+    eventLocation: 'Candi Borobudur, Bandung, Anjungan Losari Makassar',
+    readTime: '4 menit baca',
+    viewsCount: 5120,
+    isFeatured: true,
+    status: 'published',
+    tags: ['Running', 'Marathon 2026', 'Sport Tourism', 'Half Marathon', 'Lari Sehat'],
+    publishedAt: '2026-04-20T10:30:00Z',
+    createdAt: '2026-04-20T10:30:00Z',
+  },
+  {
+    id: 'news-03',
+    title: 'Kejuaraan Bulutangkis Indonesia Open & Masters 2026: Pembagian Tiket & Jadwal Pertandingan Istora',
+    slug: 'kejuaraan-bulutangkis-indonesia-open-masters-2026',
+    category: 'Event Olahraga',
+    summary: 'Turnamen bulutangkis prestisius level BWF Super 1000 siap menghadirkan aksi para atlet elit dunia di Istora Gelora Bung Karno. Penonton daerah dapat mengakses live screening resmi.',
+    content: `Atmosfer legendaris Istora Senayan dipastikan kembali bergemuruh menyambut para jagoan bulutangkis dunia dalam ajang Indonesia Open dan Indonesia Masters 2026. Pertandingan yang selalu dipadati puluhan ribu suporter setia ini menjadi tolok ukur kesiapan para atlet menjelang kejuaraan dunia musim gugur.
+
+Untuk mempermudah penonton yang berasal dari luar Jakarta, panitia bekerjasama dengan komunitas olahraga di Makassar, Surabaya, Medan, dan Balikpapan untuk mengadakan 'Public Live Screening & Badminton Fest' resmi berlisensi.
+
+Penjualan tiket kategori VIP, Regular, dan Terusan akan dibuka dalam dua gelombang dengan sistem verifikasi kartu identitas digital guna mencegah praktik spekulan tiket. Bagi masyarakat di Sulawesi yang ingin menggelar nonton bareng resmi atau kompetisi bulutangkis antar-instansi daerah, Celebes Event memfasilitasi sistem ticketing digital terpadu dengan registrasi formulir peserta lengkap.`,
+    imageUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80',
+    author: 'Redaksi Celebes Event Pusat',
+    authorRole: 'Jurnalis Olahraga Nasional',
+    eventDate: 'Juni 2026',
+    eventLocation: 'Istora Gelora Bung Karno, Senayan, Jakarta',
+    readTime: '3 menit baca',
+    viewsCount: 2950,
+    isFeatured: false,
+    status: 'published',
+    tags: ['Bulutangkis', 'Indonesia Open', 'BWF Super 1000', 'Istora Senayan', 'Sport Indonesia'],
+    publishedAt: '2026-04-25T14:00:00Z',
+    createdAt: '2026-04-25T14:00:00Z',
+  },
+  {
+    id: 'news-04',
+    title: 'Festival Budaya Toraja & Karnaval Bahari Tomini 2026: Parade Seni Tradisi Tertua di Dunia',
+    slug: 'festival-budaya-toraja-karnaval-bahari-tomini-2026',
+    category: 'Festival Budaya & Wisata',
+    summary: 'Pemerintah daerah bersama Kementerian Pariwisata mengukuhkan Festival Budaya Toraja dan Sail Tomini sebagai Karisma Event Nusantara (KEN) 2026 dengan perpaduan magis tradisi dan inovasi pariwisata.',
+    content: `Kekayaan khazanah budaya Sulawesi kembali menjadi sorotan dunia internasional. Mengusung tema 'Leluhur Abadi & Harmoni Bahari', Festival Budaya Tana Toraja 2026 akan menampilkan orkestra bambu massal, tarian Ma'gellu pusaka, ritual adat Rambu Solo yang sakral, serta pameran ukiran kayu Toraja berusia ratusan tahun.
+
+Sementara di pesisir Teluk Tomini, parade perahu hias Pinisi dan perahu nelayan tradisional berlayar serentak melintasi garis khatulistiwa. Agenda ini diproyeksikan menarik lebih dari 45.000 wisatawan nusantara dan 8.000 wisatawan mancanegara.
+
+Super Admin Celebes Event bekerja sama dengan dinas kebudayaan serta puluhan UMKM lokal kuliner (Kopi Toraja, Dangkot, Songkolo, Pa'piong) untuk menyediakan reservasi tiket atraksi budaya, pendaftaran workshop ukir, dan homestay terpadu dalam satu aplikasi.`,
+    imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1200&q=80',
+    author: 'Dewan Redaksi Wisata Celebes',
+    authorRole: 'Editor Kebudayaan & Wisata Nusantara',
+    eventDate: 'Juli - Agustus 2026',
+    eventLocation: 'Kete Kesu Toraja & Teluk Tomini Sulawesi Tengah',
+    readTime: '5 menit baca',
+    viewsCount: 4210,
+    isFeatured: true,
+    status: 'published',
+    tags: ['Budaya Toraja', 'Sail Tomini', 'Karisma Event Nusantara', 'Pariwisata Sulawesi'],
+    publishedAt: '2026-05-01T08:00:00Z',
+    createdAt: '2026-05-01T08:00:00Z',
+  },
+  {
+    id: 'news-05',
+    title: 'Celebes Tech Summit & AI Expo 2026: Mengakselerasi Ekosistem Startup & Talenta Digital Indonesia Timur',
+    slug: 'celebes-tech-summit-ai-expo-2026-makassar',
+    category: 'Pameran & Konferensi',
+    summary: 'Ratusan founder startup, investor modal ventura, pengembang kecerdasan buatan, dan mahasiswa teknologi bersiap berkumpul di Makassar dalam perhelatan akbar teknologi terbesar di timur nusantara.',
+    content: `Perkembangan pesat adopsi kecerdasan buatan (Artificial Intelligence), komputasi awan, dan digitalisasi logistik di Indonesia timur akan dikupas tuntas dalam Celebes Tech Summit & AI Expo 2026 di Phinisi Grand Ballroom Claro Makassar.
+
+Konferensi ini menghadirkan lebih dari 40 pembicara ternama, mulai dari pimpinan raksasa teknologi global, menteri kementerian digital, hingga founder unicorn Asia Tenggara. Peserta akan disuguhkan sesi demo interaktif AI, kompetisi pitch deck startup, dan networking lounge khusus pencarian mitra kerja sama bisnis.
+
+Bagi mahasiswa, kreator muda, dan profesional IT, tiket seminar serta workshop teknis dapat dipesan langsung dengan potongan khusus melalui platform Celebes Event. E-tiket yang terbit dilengkapi barcode validasi otomatis untuk penukaran lencana nama (*badge lanyard*) di meja registrasi.`,
+    imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+    author: 'Tim Riset & Inovasi Celebes Event',
+    authorRole: 'Analis Teknologi & Startup',
+    eventDate: '20 - 21 November 2026',
+    eventLocation: 'Phinisi Grand Ballroom, Claro Makassar',
+    readTime: '4 menit baca',
+    viewsCount: 6300,
+    isFeatured: false,
+    status: 'published',
+    tags: ['Tech Summit', 'AI Expo 2026', 'Startup Makassar', 'Inovasi Digital', 'Konferensi'],
+    publishedAt: '2026-05-04T11:00:00Z',
+    createdAt: '2026-05-04T11:00:00Z',
+  },
+  {
+    id: 'news-06',
+    title: 'Tips Aman Membeli Tiket Event Online: Hindari Calo & Lindungi Data Pribadi Anda',
+    slug: 'tips-aman-beli-tiket-event-online-hindari-calo',
+    category: 'Informasi & Tips Event',
+    summary: 'Pelajari kiat-kiat penting mengenali platform tiket resmi, cara kerja verifikasi QR Code sekali pakai, dan panduan klaim tiket bergaransi di Celebes Event.',
+    content: `Maraknya penipuan tiket konser dan event olahraga di media sosial menjadi keprihatinan bersama penikmat hiburan di tanah air. Modus operandi calo seringkali melibatkan penjualan barcode duplikat ke beberapa korban sekaligus atau menggunakan bukti transfer palsu.
+
+Berikut panduan aman bertransaksi tiket digital yang dirilis oleh Tim Keamanan Sistem Celebes Event:
+1. **Selalu Transaksi di Platform Resmi**: Pastikan URL beralamat sah dan memiliki sertifikat keamanan SSL (gembok hijau/HTTPS).
+2. **Kerahasiaan QR Code E-Tiket**: Barcode atau QR Code e-tiket adalah bukti kepemilikan Anda yang setara dengan tiket fisik. Jangan pernah mengunggah foto penuh e-tiket ke media sosial (Instagram Story/TikTok) sebelum acara selesai.
+3. **Validasi Scanner Check-In**: Di Celebes Event, setiap tiket memiliki nomor seri unik dan payload terenkripsi yang hanya dapat di-check-in SATU KALI oleh scanner panitia. Jika tiket telah digunakan, scanner akan berbunyi peringatan merah.
+4. **Simpan Invoice & Kontak Bantuan**: Simpan nomor order (contoh: CE-202605-1234) dan gunakan fitur Pusat Bantuan di website bila mengalami kendala teknis saat transaksi.`,
+    imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+    author: 'Pusat Keamanan Siber Celebes Event',
+    authorRole: 'Spesialis Keamanan & Anti-Fraud',
+    eventDate: 'Panduan Edukasi Resmi',
+    eventLocation: 'Nasional & Sulawesi',
+    readTime: '3 menit baca',
+    viewsCount: 8450,
+    isFeatured: false,
+    status: 'published',
+    tags: ['Edukasi Tiket', 'Keamanan Transaksi', 'Anti Calo', 'Tips Event', 'Celebes Safety'],
+    publishedAt: '2026-05-06T15:00:00Z',
+    createdAt: '2026-05-06T15:00:00Z',
+  },
+];
+
 
 
 

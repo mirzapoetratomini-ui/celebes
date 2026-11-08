@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --external:vite --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=server.js",
+    "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('dist/assets', 'public/assets', {recursive:true}); fs.copyFileSync('dist/index.html', 'public/index.html');\" && esbuild server.ts --bundle --platform=node --format=esm --external:vite --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=server.js",
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

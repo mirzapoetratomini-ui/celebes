@@ -40,28 +40,39 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { TicketInvoiceModal } from './components/TicketInvoiceModal';
 import { SocialShareModal } from './components/SocialShareModal';
 import { AuthModal } from './components/AuthModal';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { CreatorDashboard } from './components/CreatorDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserTicketsView } from './components/UserTicketsView';
 import { HelpCenterModal } from './components/HelpCenterModal';
+import { NewsSection } from './components/NewsSection';
+import { NewsDetailModal } from './components/NewsDetailModal';
 
-import { EventItem, Order, PayoutRequest, TicketTier, User, UserRole, PlatformSettings } from './types';
-import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_FAQS } from './data/seedData';
+import { EventItem, Order, PayoutRequest, TicketTier, User, UserRole, PlatformSettings, EventNews } from './types';
+import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_FAQS, INITIAL_EVENT_NEWS } from './data/seedData';
 import { api } from './services/api';
 
 export default function App() {
   // Pengunjung publik default (selalu null / mode tamu saat pertama kali membuka website)
+  // KEAMANAN TINGKAT TINGGI: Super Admin TIDAK PERNAH di-autologin secara otomatis saat membuka laman beranda.
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('celebes_auth_user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.id && parsed.email) return parsed;
+        if (parsed && parsed.id && parsed.email) {
+          // Jika tersimpan sebagai admin, hapus dari localStorage demi keamanan publik
+          if (parsed.role === 'admin') {
+            localStorage.removeItem('celebes_auth_user');
+            return null;
+          }
+          return parsed;
+        }
       }
     } catch {}
     return null;
   });
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-tickets' | 'creator-studio' | 'admin-portal'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-tickets' | 'news' | 'creator-studio' | 'admin-portal'>('browse');
 
   // Platform Settings & Branding (Super Admin Managed)
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings>(DEFAULT_PLATFORM_SETTINGS);
@@ -71,6 +82,10 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [payouts, setPayouts] = useState<PayoutRequest[]>(INITIAL_PAYOUTS);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+
+  // Berita & Informasi Event Nasional (Musik, Olahraga, Running/Marathon, Budaya)
+  const [newsList, setNewsList] = useState<EventNews[]>(INITIAL_EVENT_NEWS);
+  const [selectedNewsForDetail, setSelectedNewsForDetail] = useState<EventNews | null>(null);
 
   // Filters & Discovery
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,6 +101,7 @@ export default function App() {
   const [shareEvent, setShareEvent] = useState<EventItem | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register_creator' | 'register_user'>('login');
+  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
   const [openFaqId, setOpenFaqId] = useState<string | null>('faq-01');
 
@@ -102,13 +118,15 @@ export default function App() {
         ordersResult,
         payoutsResult,
         usersResult,
-        settingsResult
+        settingsResult,
+        newsResult,
       ] = await Promise.allSettled([
         api.getEvents(),
         api.getOrders(),
         api.getPayouts(),
         api.getUsers(),
         api.getSettings(),
+        api.getNews(undefined, true),
       ]);
 
       if (eventsResult.status === 'fulfilled' && Array.isArray(eventsResult.value)) {
@@ -126,6 +144,9 @@ export default function App() {
       if (settingsResult.status === 'fulfilled' && settingsResult.value) {
         setPlatformSettings(settingsResult.value);
       }
+      if (newsResult.status === 'fulfilled' && Array.isArray(newsResult.value)) {
+        setNewsList(newsResult.value);
+      }
     } catch (err) {
       console.warn('[Celebes Data Sync] Gagal memperbarui data:', err);
     }
@@ -139,6 +160,7 @@ export default function App() {
     try {
       localStorage.removeItem('celebes_auth_user');
       sessionStorage.removeItem('celebes_auth_user');
+      sessionStorage.removeItem('celebes_admin_user');
     } catch {}
     setCurrentUser(null);
     setActiveTab('browse');
@@ -579,6 +601,70 @@ export default function App() {
               </div>
             </div>
 
+            {/* SECTION 5B: Kabar & Berita Event Terkini (Musik, Olahraga, Marathon, Budaya) */}
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                  <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                    Berita & Informasi Event
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+                    Kabar & Liputan Event di Indonesia
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-500">
+                    Update terhangat konser musik, race running marathon, turnamen olahraga, dan festival budaya di seluruh Indonesia.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('news')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer shrink-0"
+                >
+                  <span>Lihat Semua Berita Event</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {newsList.slice(0, 3).map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedNewsForDetail(item)}
+                    className="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1"
+                  >
+                    <div className="relative aspect-16/9 bg-slate-100 overflow-hidden">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-extrabold">
+                        {item.category}
+                      </span>
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                          <span>{item.publishedAt}</span>
+                          <span>•</span>
+                          <span>{item.author}</span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors line-clamp-2">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          {item.summary}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-blue-600">
+                        <span>Baca Liputan Lengkap</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* SECTION 6: Keunggulan Layanan Tiket (Trust & Guarantees) */}
             <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white border border-slate-800 shadow-xl space-y-8">
               <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -717,6 +803,15 @@ export default function App() {
           </div>
         )}
 
+        {/* VIEW: KABAR & BERITA EVENT NASIONAL */}
+        {activeTab === 'news' && (
+          <NewsSection
+            newsList={newsList}
+            onSelectNews={(n) => setSelectedNewsForDetail(n)}
+            onBrowseEvents={() => setActiveTab('browse')}
+          />
+        )}
+
         {/* VIEW 2: TIKET SAYA */}
         {activeTab === 'my-tickets' && (
           currentUser ? (
@@ -810,7 +905,7 @@ export default function App() {
                 Halaman ini hanya dapat diakses oleh akun Super Administrator platform.
               </p>
               <button
-                onClick={() => setIsAuthModalOpen(true)}
+                onClick={() => setIsAdminAuthModalOpen(true)}
                 className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
               >
                 Masuk sebagai Super Admin
@@ -888,6 +983,15 @@ export default function App() {
                 Kategori Event
               </h4>
               <ul className="space-y-2 text-xs">
+                <li>
+                  <button
+                    onClick={() => setActiveTab('news')}
+                    className="text-blue-400 hover:text-blue-300 font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Kabar & Berita Event</span>
+                    <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded text-[9px] font-bold">Baru</span>
+                  </button>
+                </li>
                 {categories.slice(1, 6).map((cat) => (
                   <li key={cat}>
                     <button
@@ -1082,11 +1186,18 @@ export default function App() {
             <span>© 2026 {platformSettings.platformName}. Seluruh hak cipta dilindungi undang-undang.</span>
             <div className="flex items-center gap-4">
               <span>Keamanan Transaksi 256-Bit SSL Terenkripsi</span>
+              
+              {/* TOMBOL LOGO TERSEMBUNYI KHUSUS LOGIN SUPER ADMIN / ADMIN PUSAT */}
               <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="text-slate-500 hover:text-slate-300 transition-colors text-[11px] cursor-pointer"
+                onClick={() => setIsAdminAuthModalOpen(true)}
+                title="Pusat Kendali Admin Pusat (Super Admin)"
+                aria-label="Pusat Kendali Admin Pusat"
+                className="group p-1.5 px-2.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-300 transition-all cursor-pointer flex items-center gap-1.5"
               >
-                Portal Akses Pengelola
+                <Shield className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                <span className="text-[10px] font-mono tracking-wider font-semibold opacity-60 group-hover:opacity-100">
+                  ADMIN PUSAT
+                </span>
               </button>
             </div>
           </div>
@@ -1141,7 +1252,7 @@ export default function App() {
         event={shareEvent}
       />
 
-      {/* 5. Unified Login & Registration Modal (Creator Onboarding, Super Admin, User) */}
+      {/* 5. Regular User & Creator Onboarding Login Modal (Super Admin login isolated) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -1149,7 +1260,12 @@ export default function App() {
         initialMode={authModalMode}
         onLoginSuccess={(user) => {
           try {
-            localStorage.setItem('celebes_auth_user', JSON.stringify(user));
+            if (user.role === 'admin') {
+              localStorage.removeItem('celebes_auth_user');
+              sessionStorage.setItem('celebes_admin_user', JSON.stringify(user));
+            } else {
+              localStorage.setItem('celebes_auth_user', JSON.stringify(user));
+            }
           } catch {}
           setCurrentUser(user);
           refreshAllData();
@@ -1159,7 +1275,32 @@ export default function App() {
         }}
       />
 
-      {/* 6. Pusat Bantuan & Layanan Penyampaian Kendala Modal */}
+      {/* 6. Dedicated Super Admin / Admin Pusat Authentication Modal */}
+      <AdminAuthModal
+        isOpen={isAdminAuthModalOpen}
+        onClose={() => setIsAdminAuthModalOpen(false)}
+        onLoginSuccess={(adminUser) => {
+          try {
+            localStorage.removeItem('celebes_auth_user');
+            sessionStorage.setItem('celebes_admin_user', JSON.stringify(adminUser));
+          } catch {}
+          setCurrentUser(adminUser);
+          setActiveTab('admin-portal');
+          refreshAllData();
+        }}
+      />
+
+      {/* 7. Modal Detail Baca Berita & Liputan Event Indonesia */}
+      <NewsDetailModal
+        news={selectedNewsForDetail}
+        onClose={() => setSelectedNewsForDetail(null)}
+        onBrowseEvents={() => {
+          setSelectedNewsForDetail(null);
+          setActiveTab('browse');
+        }}
+      />
+
+      {/* 8. Pusat Bantuan & Layanan Penyampaian Kendala Modal */}
       <HelpCenterModal
         isOpen={isHelpCenterOpen}
         onClose={() => setIsHelpCenterOpen(false)}

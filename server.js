@@ -47341,22 +47341,6 @@ var INITIAL_USERS = [
     createdAt: "2026-01-01T08:00:00Z"
   },
   {
-    id: "usr-admin-01",
-    email: "admin@celebes-event.com",
-    name: "Super Administrator Celebes Event",
-    role: "admin",
-    password: "demo123",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
-    phone: "081241129988",
-    organization: "Celebes Event Platform HQ",
-    auth_provider: "local",
-    status: "active",
-    bankName: "BCA",
-    bankAccountNumber: "8880192831",
-    bankAccountName: "PT CELEBES EVENT NUSANTARA",
-    createdAt: "2026-01-15T08:00:00Z"
-  },
-  {
     id: "usr-creator-01",
     email: "kreator@celebescreative.id",
     name: "Celebes Creative Promosindo",
@@ -48118,6 +48102,266 @@ var INITIAL_FAQS = [
     answer: 'Anda dapat langsung memanfaatkan menu "Pusat Bantuan" di pojok kanan atas atau bagian footer untuk menyampaikan kendala. Tim Customer Support kami siaga melalui WhatsApp resmi dan live email.'
   }
 ];
+var INITIAL_NATIONAL_EVENTS = [
+  {
+    id: "nat-ev-01",
+    title: "Jakarta International Sound & Creative Expo (JISCE 2026)",
+    province: "DKI Jakarta",
+    city: "Jakarta Pusat (JIExpo Kemayoran)",
+    category: "Festival Musik & Hiburan",
+    organizer: "Asosiasi Promotor & Pengusaha Panggung Indonesia",
+    eventDate: "24 - 26 Juli 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/jisce-jakarta-2026",
+    ctaLabel: "Buka Link Publikasi Resmi",
+    badge: "Bisa Ikut Publikasi",
+    description: "Pameran industri musik, tata suara, panggung festival terbesar di Asia Tenggara. Promotor dan EO daerah dapat bergabung dalam jejaring publikasi tiket serentak nusantara.",
+    isActive: true,
+    orderIndex: 1,
+    createdAt: "2026-03-01T10:00:00Z"
+  },
+  {
+    id: "nat-ev-02",
+    title: "Bali Creative & Tech Nomad Summit 2026",
+    province: "Bali",
+    city: "Badung / Nusa Dua",
+    category: "Teknologi & Bisnis",
+    organizer: "Bali Creative Hub & Global Tech Partners",
+    eventDate: "14 - 16 Agustus 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/bali-tech-summit-2026",
+    ctaLabel: "Ikut Kemitraan Publikasi",
+    badge: "Call for Partners",
+    description: "Pertemuan 2.500+ founder startup, digital nomad, dan kreator konten dunia di Bali. Pendaftaran slot co-host dan jalur distribusi tiket terbuka untuk mitra seluruh Indonesia.",
+    isActive: true,
+    orderIndex: 2,
+    createdAt: "2026-03-05T11:00:00Z"
+  },
+  {
+    id: "nat-ev-03",
+    title: "Borobudur Heritage Cultural Run & Festival 2026",
+    province: "Jawa Tengah",
+    city: "Magelang / Candi Borobudur",
+    category: "Olahraga & Fun Run",
+    organizer: "Yayasan Warisan Candi & Komite Olahraga Pariwisata",
+    eventDate: "6 September 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/borobudur-run-2026",
+    ctaLabel: "Lihat Info & Tiket Resmi",
+    badge: "Bisa Ikut Publikasi",
+    description: "Lari maraton 10K & 21K mengitari keindahan candi bersejarah Borobudur dan perdesaan asri. Menerima publikasi kolaborasi komunitas lari dan agen tiket se-Indonesia.",
+    isActive: true,
+    orderIndex: 3,
+    createdAt: "2026-03-10T09:00:00Z"
+  },
+  {
+    id: "nat-ev-04",
+    title: "Makassar International Eight Festival (F8 Celebes) 2026",
+    province: "Sulawesi Selatan",
+    city: "Makassar (Anjungan Pantai Losari)",
+    category: "Budaya & Kuliner",
+    organizer: "Dinas Pariwisata Makassar & PT Festival Delapan",
+    eventDate: "23 - 27 September 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/f8-makassar-celebes",
+    ctaLabel: "Buka Link Publikasi Resmi",
+    badge: "Featured Nasional",
+    description: "Festival akbar 8 unsur seni dan budaya (Fashion, Film, Food, Folk, Fine Art, Flora Fauna, Fusion Music, Fiction Writer) pesisir Sulawesi Selatan bertaraf internasional.",
+    isActive: true,
+    orderIndex: 4,
+    createdAt: "2026-03-15T14:00:00Z"
+  },
+  {
+    id: "nat-ev-05",
+    title: "Bandung Indie Creative Week & Fashion Circuit 2026",
+    province: "Jawa Barat",
+    city: "Bandung (Area Gedung Sate / Gasibu)",
+    category: "Pameran & Expo",
+    organizer: "Kolektif Kreatif Priangan Nusantara",
+    eventDate: "10 - 12 Oktober 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/bandung-creative-week",
+    ctaLabel: "Daftar Jejaring Promosi",
+    badge: "Bisa Ikut Publikasi",
+    description: "Eksibisi karya desainer lokal, distro fashion, dan pertunjukan band indie nusantara. Komunitas kreatif dari luar Jawa dapat berpartisipasi dalam slot publikasi bersama.",
+    isActive: true,
+    orderIndex: 5,
+    createdAt: "2026-03-20T16:00:00Z"
+  },
+  {
+    id: "nat-ev-06",
+    title: "Nusantara Borneo Future Green Expo 2026",
+    province: "Kalimantan Timur",
+    city: "Balikpapan & Kawasan IKN",
+    category: "Pendidikan & Seminar",
+    organizer: "Dewan Pemuda Nusantara & Mitra Industri Hijau",
+    eventDate: "7 - 9 November 2026",
+    bannerUrl: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80",
+    externalUrl: "https://event.bergulir.com/publish/borneo-green-expo",
+    ctaLabel: "Buka Tautan Resmi",
+    badge: "Kemitraan Terbuka",
+    description: "Forum pemuda dan inovator transisi energi ramah lingkungan pulau Kalimantan dan kawasan ibu kota nusantara. Terbuka kerjasama publikasi delegasi organisasi se-Indonesia.",
+    isActive: true,
+    orderIndex: 6,
+    createdAt: "2026-03-25T13:00:00Z"
+  }
+];
+var INITIAL_EVENT_NEWS = [
+  {
+    id: "news-01",
+    title: "Musim Konser Musik Nasional 2026 Dimulai: Band Papan Atas & Bintang Pop Siap Keliling Sulawesi & Nusantara",
+    slug: "musim-konser-musik-nasional-2026-keliling-sulawesi",
+    category: "Event Musik & Konser",
+    summary: "Deretan festival musik akbar dan tur konser tunggal musisi legendaris tanah air telah merilis kalender resmi untuk paruh kedua tahun 2026. Makassar, Manado, dan Palu masuk daftar kota utama.",
+    content: `Industri pertunjukan musik tanah air kembali menggeliat dengan antusiasme yang luar biasa tinggi pada tahun 2026. Sejumlah promotor musik terkemuka mengumumkan rangkaian tur konser berskala stadion dan panggung festival terbuka yang akan menyambangi berbagai penjuru Indonesia, khususnya kawasan timur yang kian diminati para musisi internasional dan nasional.
+
+Makassar, sebagai episentrum kreatif Sulawesi Selatan, dijadwalkan menjadi tuan rumah sedikitnya 8 festival musik akbar mulai dari genre jazz, pop alternatif, hingga indie-folk. Di antara nama-nama besar yang dipastikan hadir adalah Sheila on 7, Tulus, Raisa, Hindia, Juicy Luicy, serta deretan musisi lokal berprestasi asal Makassar, Bone, dan Toraja.
+
+"Antusiasme publik terhadap konser live saat ini bukan hanya tentang menyaksikan idola mereka, melainkan momentum kebersamaan budaya dan rekreasi keluarga. Platform Celebes Event hadir memastikan akses tiket resmi bebas calo dan verifikasi barcode instan di pintu masuk," ujar koordinator promotor nasional.
+
+Para penggemar musik disarankan untuk memantau pengumuman tiket resmi berkala, memastikan pembayaran dilakukan melalui gerbang QRIS atau transfer terverifikasi resmi, serta menghindari transaksi di luar platform untuk menjamin keaslian e-tiket.`,
+    imageUrl: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+    author: "Tim Redaksi Hiburan Celebes Event",
+    authorRole: "Jurnalis Musik & Hiburan",
+    eventDate: "Mei - Desember 2026",
+    eventLocation: "Pantai Losari Makassar, Senayan Jakarta, Lapangan Koni Manado",
+    readTime: "3 menit baca",
+    viewsCount: 3840,
+    isFeatured: true,
+    status: "published",
+    tags: ["Konser Musik", "Festival 2026", "Makassar Live", "Tiket Konser", "Celebes Music"],
+    publishedAt: "2026-04-15T09:00:00Z",
+    createdAt: "2026-04-15T09:00:00Z"
+  },
+  {
+    id: "news-02",
+    title: "Pocari Sweat Run & Borobudur Marathon 2026 Buka Kuota Tiket: Simak Syarat & Tips Lolos War Tiket",
+    slug: "marathon-running-indonesia-2026-panduan-registrasi",
+    category: "Running & Marathon",
+    summary: "Tren olahraga lari (running) kian masif di tanah air. Simak panduan lengkap pendaftaran kategori 5K, 10K, Half Marathon, dan Full Marathon serta tips persiapan fisik pelari pemula hingga atlet.",
+    content: `Gelombang olahraga lari di Indonesia mencatat rekor partisipasi tertinggi dalam sejarah. Memasuki pertengahan 2026, antusiasme pelari jalan raya (road runner) dan pelari lintas alam (trail runner) terus memuncak menyambut seri kejuaraan bergengsi nasional seperti Pocari Sweat Run Indonesia, Borobudur Marathon, dan Makassar Half Marathon.
+
+Tahun ini, penyelenggara menerapkan sistem registrasi terintegrasi dengan verifikasi identitas resmi dan pembagian slot berbasis ballot serta direct slot bagi pelari kualifikasi. Selain di pulau Jawa, ajang lari di Sulawesi seperti Celebes Coastal Run dan Toraja Ultra Trail juga siap menyambut ribuan pelari dari Sabang sampai Merauke.
+
+Dokter spesialis kedokteran olahraga menyarankan beberapa langkah kunci bagi calon peserta:
+1. Mulailah program latihan bertahap (easy run, long run akhir pekan, dan penguatan otot core).
+2. Perhatikan hidrasi dan nutrisi bernutrisi seimbang jelang hari lomba.
+3. Gunakan sepatu lari yang sesuai dengan bentuk tapak kaki dan telah dipakai adaptasi minimal 30 kilometer.
+4. Segera simpan nomor pendaftaran dan cetak tiket barcode invoice resmi Celebes Event untuk pengambilan paket lomba (Race Pack Collection).
+
+"Lari bukan sekadar kompetisi kecepatan, melainkan perayaan gaya hidup sehat nusantara dan sport tourism yang menggerakkan perekonomian lokal," demikian keterangan panitia pelaksana.`,
+    imageUrl: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80",
+    author: "Rubrik Olahraga Bergulir Media",
+    authorRole: "Koresponden Sport Tourism",
+    eventDate: "Agustus - Oktober 2026",
+    eventLocation: "Candi Borobudur, Bandung, Anjungan Losari Makassar",
+    readTime: "4 menit baca",
+    viewsCount: 5120,
+    isFeatured: true,
+    status: "published",
+    tags: ["Running", "Marathon 2026", "Sport Tourism", "Half Marathon", "Lari Sehat"],
+    publishedAt: "2026-04-20T10:30:00Z",
+    createdAt: "2026-04-20T10:30:00Z"
+  },
+  {
+    id: "news-03",
+    title: "Kejuaraan Bulutangkis Indonesia Open & Masters 2026: Pembagian Tiket & Jadwal Pertandingan Istora",
+    slug: "kejuaraan-bulutangkis-indonesia-open-masters-2026",
+    category: "Event Olahraga",
+    summary: "Turnamen bulutangkis prestisius level BWF Super 1000 siap menghadirkan aksi para atlet elit dunia di Istora Gelora Bung Karno. Penonton daerah dapat mengakses live screening resmi.",
+    content: `Atmosfer legendaris Istora Senayan dipastikan kembali bergemuruh menyambut para jagoan bulutangkis dunia dalam ajang Indonesia Open dan Indonesia Masters 2026. Pertandingan yang selalu dipadati puluhan ribu suporter setia ini menjadi tolok ukur kesiapan para atlet menjelang kejuaraan dunia musim gugur.
+
+Untuk mempermudah penonton yang berasal dari luar Jakarta, panitia bekerjasama dengan komunitas olahraga di Makassar, Surabaya, Medan, dan Balikpapan untuk mengadakan 'Public Live Screening & Badminton Fest' resmi berlisensi.
+
+Penjualan tiket kategori VIP, Regular, dan Terusan akan dibuka dalam dua gelombang dengan sistem verifikasi kartu identitas digital guna mencegah praktik spekulan tiket. Bagi masyarakat di Sulawesi yang ingin menggelar nonton bareng resmi atau kompetisi bulutangkis antar-instansi daerah, Celebes Event memfasilitasi sistem ticketing digital terpadu dengan registrasi formulir peserta lengkap.`,
+    imageUrl: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80",
+    author: "Redaksi Celebes Event Pusat",
+    authorRole: "Jurnalis Olahraga Nasional",
+    eventDate: "Juni 2026",
+    eventLocation: "Istora Gelora Bung Karno, Senayan, Jakarta",
+    readTime: "3 menit baca",
+    viewsCount: 2950,
+    isFeatured: false,
+    status: "published",
+    tags: ["Bulutangkis", "Indonesia Open", "BWF Super 1000", "Istora Senayan", "Sport Indonesia"],
+    publishedAt: "2026-04-25T14:00:00Z",
+    createdAt: "2026-04-25T14:00:00Z"
+  },
+  {
+    id: "news-04",
+    title: "Festival Budaya Toraja & Karnaval Bahari Tomini 2026: Parade Seni Tradisi Tertua di Dunia",
+    slug: "festival-budaya-toraja-karnaval-bahari-tomini-2026",
+    category: "Festival Budaya & Wisata",
+    summary: "Pemerintah daerah bersama Kementerian Pariwisata mengukuhkan Festival Budaya Toraja dan Sail Tomini sebagai Karisma Event Nusantara (KEN) 2026 dengan perpaduan magis tradisi dan inovasi pariwisata.",
+    content: `Kekayaan khazanah budaya Sulawesi kembali menjadi sorotan dunia internasional. Mengusung tema 'Leluhur Abadi & Harmoni Bahari', Festival Budaya Tana Toraja 2026 akan menampilkan orkestra bambu massal, tarian Ma'gellu pusaka, ritual adat Rambu Solo yang sakral, serta pameran ukiran kayu Toraja berusia ratusan tahun.
+
+Sementara di pesisir Teluk Tomini, parade perahu hias Pinisi dan perahu nelayan tradisional berlayar serentak melintasi garis khatulistiwa. Agenda ini diproyeksikan menarik lebih dari 45.000 wisatawan nusantara dan 8.000 wisatawan mancanegara.
+
+Super Admin Celebes Event bekerja sama dengan dinas kebudayaan serta puluhan UMKM lokal kuliner (Kopi Toraja, Dangkot, Songkolo, Pa'piong) untuk menyediakan reservasi tiket atraksi budaya, pendaftaran workshop ukir, dan homestay terpadu dalam satu aplikasi.`,
+    imageUrl: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=1200&q=80",
+    author: "Dewan Redaksi Wisata Celebes",
+    authorRole: "Editor Kebudayaan & Wisata Nusantara",
+    eventDate: "Juli - Agustus 2026",
+    eventLocation: "Kete Kesu Toraja & Teluk Tomini Sulawesi Tengah",
+    readTime: "5 menit baca",
+    viewsCount: 4210,
+    isFeatured: true,
+    status: "published",
+    tags: ["Budaya Toraja", "Sail Tomini", "Karisma Event Nusantara", "Pariwisata Sulawesi"],
+    publishedAt: "2026-05-01T08:00:00Z",
+    createdAt: "2026-05-01T08:00:00Z"
+  },
+  {
+    id: "news-05",
+    title: "Celebes Tech Summit & AI Expo 2026: Mengakselerasi Ekosistem Startup & Talenta Digital Indonesia Timur",
+    slug: "celebes-tech-summit-ai-expo-2026-makassar",
+    category: "Pameran & Konferensi",
+    summary: "Ratusan founder startup, investor modal ventura, pengembang kecerdasan buatan, dan mahasiswa teknologi bersiap berkumpul di Makassar dalam perhelatan akbar teknologi terbesar di timur nusantara.",
+    content: `Perkembangan pesat adopsi kecerdasan buatan (Artificial Intelligence), komputasi awan, dan digitalisasi logistik di Indonesia timur akan dikupas tuntas dalam Celebes Tech Summit & AI Expo 2026 di Phinisi Grand Ballroom Claro Makassar.
+
+Konferensi ini menghadirkan lebih dari 40 pembicara ternama, mulai dari pimpinan raksasa teknologi global, menteri kementerian digital, hingga founder unicorn Asia Tenggara. Peserta akan disuguhkan sesi demo interaktif AI, kompetisi pitch deck startup, dan networking lounge khusus pencarian mitra kerja sama bisnis.
+
+Bagi mahasiswa, kreator muda, dan profesional IT, tiket seminar serta workshop teknis dapat dipesan langsung dengan potongan khusus melalui platform Celebes Event. E-tiket yang terbit dilengkapi barcode validasi otomatis untuk penukaran lencana nama (*badge lanyard*) di meja registrasi.`,
+    imageUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80",
+    author: "Tim Riset & Inovasi Celebes Event",
+    authorRole: "Analis Teknologi & Startup",
+    eventDate: "20 - 21 November 2026",
+    eventLocation: "Phinisi Grand Ballroom, Claro Makassar",
+    readTime: "4 menit baca",
+    viewsCount: 6300,
+    isFeatured: false,
+    status: "published",
+    tags: ["Tech Summit", "AI Expo 2026", "Startup Makassar", "Inovasi Digital", "Konferensi"],
+    publishedAt: "2026-05-04T11:00:00Z",
+    createdAt: "2026-05-04T11:00:00Z"
+  },
+  {
+    id: "news-06",
+    title: "Tips Aman Membeli Tiket Event Online: Hindari Calo & Lindungi Data Pribadi Anda",
+    slug: "tips-aman-beli-tiket-event-online-hindari-calo",
+    category: "Informasi & Tips Event",
+    summary: "Pelajari kiat-kiat penting mengenali platform tiket resmi, cara kerja verifikasi QR Code sekali pakai, dan panduan klaim tiket bergaransi di Celebes Event.",
+    content: `Maraknya penipuan tiket konser dan event olahraga di media sosial menjadi keprihatinan bersama penikmat hiburan di tanah air. Modus operandi calo seringkali melibatkan penjualan barcode duplikat ke beberapa korban sekaligus atau menggunakan bukti transfer palsu.
+
+Berikut panduan aman bertransaksi tiket digital yang dirilis oleh Tim Keamanan Sistem Celebes Event:
+1. **Selalu Transaksi di Platform Resmi**: Pastikan URL beralamat sah dan memiliki sertifikat keamanan SSL (gembok hijau/HTTPS).
+2. **Kerahasiaan QR Code E-Tiket**: Barcode atau QR Code e-tiket adalah bukti kepemilikan Anda yang setara dengan tiket fisik. Jangan pernah mengunggah foto penuh e-tiket ke media sosial (Instagram Story/TikTok) sebelum acara selesai.
+3. **Validasi Scanner Check-In**: Di Celebes Event, setiap tiket memiliki nomor seri unik dan payload terenkripsi yang hanya dapat di-check-in SATU KALI oleh scanner panitia. Jika tiket telah digunakan, scanner akan berbunyi peringatan merah.
+4. **Simpan Invoice & Kontak Bantuan**: Simpan nomor order (contoh: CE-202605-1234) dan gunakan fitur Pusat Bantuan di website bila mengalami kendala teknis saat transaksi.`,
+    imageUrl: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80",
+    author: "Pusat Keamanan Siber Celebes Event",
+    authorRole: "Spesialis Keamanan & Anti-Fraud",
+    eventDate: "Panduan Edukasi Resmi",
+    eventLocation: "Nasional & Sulawesi",
+    readTime: "3 menit baca",
+    viewsCount: 8450,
+    isFeatured: false,
+    status: "published",
+    tags: ["Edukasi Tiket", "Keamanan Transaksi", "Anti Calo", "Tips Event", "Celebes Safety"],
+    publishedAt: "2026-05-06T15:00:00Z",
+    createdAt: "2026-05-06T15:00:00Z"
+  }
+];
 
 // src/utils/ticketing-logic.ts
 function verifyAndCheckInTicket(ticket, nowIso = (/* @__PURE__ */ new Date()).toISOString()) {
@@ -48202,6 +48446,8 @@ var memorySettings = JSON.parse(JSON.stringify(DEFAULT_PLATFORM_SETTINGS));
 var memorySupportTickets = JSON.parse(JSON.stringify(INITIAL_SUPPORT_TICKETS));
 var memoryFaqs = JSON.parse(JSON.stringify(INITIAL_FAQS));
 var memorySentEmails = JSON.parse(JSON.stringify(INITIAL_SENT_EMAILS));
+var memoryNationalEvents = JSON.parse(JSON.stringify(INITIAL_NATIONAL_EVENTS));
+var memoryNews = JSON.parse(JSON.stringify(INITIAL_EVENT_NEWS));
 function generateCreatorApprovalEmail(user) {
   return {
     id: `eml-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
@@ -48268,6 +48514,8 @@ function saveLocalData() {
       supportTickets: memorySupportTickets,
       faqs: memoryFaqs,
       sentEmails: memorySentEmails,
+      nationalEvents: memoryNationalEvents,
+      news: memoryNews,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     fs.writeFileSync(LOCAL_STORAGE_FILE, JSON.stringify(dataToSave, null, 2), "utf8");
@@ -48289,6 +48537,8 @@ function loadLocalData() {
       if (Array.isArray(parsed.supportTickets)) memorySupportTickets = parsed.supportTickets;
       if (Array.isArray(parsed.faqs)) memoryFaqs = parsed.faqs;
       if (Array.isArray(parsed.sentEmails)) memorySentEmails = parsed.sentEmails;
+      if (Array.isArray(parsed.nationalEvents)) memoryNationalEvents = parsed.nationalEvents;
+      if (Array.isArray(parsed.news)) memoryNews = parsed.news;
       console.log("[Storage] Data lokal berhasil dimuat dari database/local_data.json");
     }
   } catch (err) {
@@ -48359,34 +48609,54 @@ function toMysqlDatetime(isoOrDateStr) {
   if (isNaN(d.getTime())) return (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
   return d.toISOString().slice(0, 19).replace("T", " ");
 }
+function getSuperAdminCredentials() {
+  const email = (process.env.SUPERADMIN_EMAIL || "redaksibergulircom@gmail.com").trim().toLowerCase();
+  const password = (process.env.SUPERADMIN_PASSWORD || "Bergulir2026!#").trim();
+  const name = (process.env.SUPERADMIN_NAME || "Super Admin Bergulir Media").trim();
+  return { email, password, name };
+}
 async function getUsersFromDb() {
+  const { email: adminEmail, password: adminPassword, name: adminName } = getSuperAdminCredentials();
   await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows] = await mysqlPool.query(`SELECT * FROM users ORDER BY created_at DESC`);
       if (Array.isArray(rows)) {
-        return rows.map((r) => ({
-          id: r.id,
-          email: r.email,
-          name: r.name,
-          password: r.password_hash || "",
-          role: r.role,
-          avatar: r.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80",
-          phone: r.phone || "",
-          organization: r.organization || "",
-          auth_provider: r.auth_provider || "local",
-          status: r.status,
-          bankName: r.bank_name || "",
-          bankAccountNumber: r.bank_account_number || "",
-          bankAccountName: r.bank_account_name || "",
-          createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || "")
-        }));
+        return rows.map((r) => {
+          const isSuperAdmin = r.id === "usr-admin-bergulir" || r.role === "admin" || r.email && r.email.toLowerCase() === adminEmail;
+          return {
+            id: r.id,
+            email: isSuperAdmin ? adminEmail : r.email,
+            name: isSuperAdmin && adminName ? adminName : r.name,
+            password: isSuperAdmin && adminPassword ? adminPassword : r.password_hash || "",
+            role: r.role,
+            avatar: r.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80",
+            phone: r.phone || "",
+            organization: r.organization || "",
+            auth_provider: r.auth_provider || "local",
+            status: r.status,
+            bankName: r.bank_name || "",
+            bankAccountNumber: r.bank_account_number || "",
+            bankAccountName: r.bank_account_name || "",
+            createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || "")
+          };
+        });
       }
     } catch (err) {
       console.warn("[Database] Query users gagal, menggunakan memori:", err.message);
     }
   }
-  return memoryUsers;
+  return memoryUsers.map((u) => {
+    if (u.id === "usr-admin-bergulir" || u.role === "admin" || u.email.toLowerCase() === adminEmail) {
+      return {
+        ...u,
+        email: adminEmail,
+        name: adminName || u.name,
+        password: adminPassword
+      };
+    }
+    return u;
+  });
 }
 async function getEventsFromDb(params) {
   await ensureMysql();
@@ -49425,15 +49695,25 @@ app.post("/api/auth/login", async (req, res) => {
   }
   const cleanEmail = email.trim().toLowerCase();
   const users = await getUsersFromDb();
-  if (cleanEmail === "redaksibergulircom@gmail.com" || cleanEmail === "admin@celebes-event.com" || cleanEmail.includes("admin@")) {
+  const { email: superAdminEmail, password: superAdminPassword, name: superAdminName } = getSuperAdminCredentials();
+  if (cleanEmail === superAdminEmail || cleanEmail === "redaksibergulircom@gmail.com") {
     const adminUser = users.find((u) => u.role === "admin" && (u.email.toLowerCase() === cleanEmail || u.id === "usr-admin-bergulir")) || users[0];
-    const isValidAdminPassword = cleanEmail === "redaksibergulircom@gmail.com" && password === "Bergulir2026!#" || cleanEmail === "admin@celebes-event.com" && (password === "demo123" || password === "Bergulir2026!#") || adminUser && adminUser.password && adminUser.password === password || password === "Bergulir2026!#";
+    const isValidAdminPassword = password === superAdminPassword || adminUser && adminUser.password && adminUser.password === password;
     if (!isValidAdminPassword) {
-      return res.status(401).json({ success: false, message: "Password Super Admin salah! Masukkan password resmi Bergulir Media." });
+      return res.status(401).json({
+        success: false,
+        message: "Password Super Admin salah! Pastikan password sesuai dengan variabel SUPERADMIN_PASSWORD di file .env server Anda."
+      });
     }
+    const safeAdminUser = {
+      ...adminUser,
+      email: superAdminEmail,
+      name: superAdminName || adminUser.name
+    };
+    delete safeAdminUser.password;
     return res.json({
       success: true,
-      user: adminUser,
+      user: safeAdminUser,
       message: "Login Super Admin Berhasil! Selamat datang di Pusat Kendali Celebes Event."
     });
   }
@@ -49674,22 +49954,129 @@ app.post("/api/faqs", async (req, res) => {
   saveLocalData();
   res.status(201).json(newFaq);
 });
+app.get("/api/news", (req, res) => {
+  const { category, all, search } = req.query;
+  let results = [...memoryNews];
+  if (all !== "true") {
+    results = results.filter((n) => n.status === "published");
+  }
+  if (category && category !== "Semua") {
+    results = results.filter((n) => n.category.toLowerCase() === String(category).toLowerCase());
+  }
+  if (search) {
+    const q = String(search).toLowerCase();
+    results = results.filter(
+      (n) => n.title.toLowerCase().includes(q) || n.summary.toLowerCase().includes(q) || n.content.toLowerCase().includes(q) || n.tags && n.tags.some((t) => t.toLowerCase().includes(q))
+    );
+  }
+  results.sort((a, b) => {
+    if (a.isFeatured && !b.isFeatured) return -1;
+    if (!a.isFeatured && b.isFeatured) return 1;
+    return new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime();
+  });
+  res.json(results);
+});
+app.get("/api/news/:idOrSlug", (req, res) => {
+  const param = req.params.idOrSlug;
+  const newsItem = memoryNews.find((n) => n.id === param || n.slug === param);
+  if (!newsItem) {
+    return res.status(404).json({ error: "Berita tidak ditemukan" });
+  }
+  newsItem.viewsCount = (newsItem.viewsCount || 0) + 1;
+  saveLocalData();
+  res.json(newsItem);
+});
+app.post("/api/news", (req, res) => {
+  const newsData = req.body;
+  if (!newsData.title || !newsData.category || !newsData.content) {
+    return res.status(400).json({ error: "Judul, kategori, dan isi berita wajib diisi!" });
+  }
+  const newId = `news-${Date.now()}`;
+  const slug = newsData.slug || newsData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+  const newNews = {
+    id: newId,
+    title: newsData.title,
+    slug,
+    category: newsData.category,
+    summary: newsData.summary || newsData.content.slice(0, 160) + "...",
+    content: newsData.content,
+    imageUrl: newsData.imageUrl || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+    author: newsData.author || "Redaksi Celebes Event",
+    authorRole: newsData.authorRole || "Redaksi Berita & Liputan Event",
+    eventDate: newsData.eventDate || "",
+    eventLocation: newsData.eventLocation || "",
+    readTime: newsData.readTime || "3 menit baca",
+    viewsCount: 0,
+    isFeatured: Boolean(newsData.isFeatured),
+    status: newsData.status || "published",
+    tags: Array.isArray(newsData.tags) ? newsData.tags : newsData.tags ? String(newsData.tags).split(",").map((t) => t.trim()) : [],
+    publishedAt: newsData.publishedAt || (/* @__PURE__ */ new Date()).toISOString(),
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  memoryNews.unshift(newNews);
+  saveLocalData();
+  res.status(201).json(newNews);
+});
+app.put("/api/news/:id", (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+  const index = memoryNews.findIndex((n) => n.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Berita tidak ditemukan" });
+  }
+  memoryNews[index] = {
+    ...memoryNews[index],
+    ...updateData,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  saveLocalData();
+  res.json(memoryNews[index]);
+});
+app.delete("/api/news/:id", (req, res) => {
+  const { id } = req.params;
+  memoryNews = memoryNews.filter((n) => n.id !== id);
+  saveLocalData();
+  res.json({ success: true, message: "Berita berhasil dihapus" });
+});
 async function startServer() {
-  const candidateDistPaths = [
-    path.resolve(APP_ROOT, "dist"),
-    path.resolve(detectedDir, "dist"),
-    path.resolve(process.cwd(), "dist"),
-    path.resolve("./dist")
-  ];
-  const distPath = candidateDistPaths.find((p) => fs.existsSync(path.resolve(p, "index.html"))) || candidateDistPaths[0];
+  function findCompiledProductionHtml() {
+    const candidates = [
+      path.resolve(APP_ROOT, "dist", "index.html"),
+      path.resolve(detectedDir, "dist", "index.html"),
+      path.resolve(process.cwd(), "dist", "index.html"),
+      path.resolve("./dist/index.html"),
+      path.resolve(APP_ROOT, "public", "index.html"),
+      path.resolve(detectedDir, "public", "index.html"),
+      path.resolve(process.cwd(), "public", "index.html"),
+      path.resolve(APP_ROOT, "index.html"),
+      path.resolve(detectedDir, "index.html"),
+      path.resolve(process.cwd(), "index.html")
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        try {
+          const content = fs.readFileSync(c, "utf8");
+          if (!content.includes("/src/main.tsx") && !content.includes("src/main.tsx")) {
+            return c;
+          }
+        } catch {
+        }
+      }
+    }
+    return null;
+  }
+  const productionHtml = findCompiledProductionHtml();
+  const distDir = productionHtml ? path.dirname(productionHtml) : path.resolve(APP_ROOT, "dist");
   const assetCandidateDirs = [
-    path.resolve(distPath, "assets"),
+    path.resolve(distDir, "assets"),
     path.resolve(APP_ROOT, "dist", "assets"),
     path.resolve(detectedDir, "dist", "assets"),
+    path.resolve(APP_ROOT, "public", "assets"),
+    path.resolve(detectedDir, "public", "assets"),
+    path.resolve(process.cwd(), "public", "assets"),
     path.resolve(APP_ROOT, "assets"),
     path.resolve(detectedDir, "assets"),
-    path.resolve(process.cwd(), "assets"),
-    path.resolve(APP_ROOT, "public", "assets")
+    path.resolve(process.cwd(), "assets")
   ];
   for (const dir of assetCandidateDirs) {
     if (fs.existsSync(dir)) {
@@ -49706,7 +50093,7 @@ async function startServer() {
       }));
     }
   }
-  app.get("/assets/:file", (req, res, next) => {
+  app.get("/assets/:file", (req, res) => {
     const fileName = path.basename(req.params.file);
     for (const dir of assetCandidateDirs) {
       const fullPath = path.resolve(dir, fileName);
@@ -49733,46 +50120,55 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(import_express.default.static(distPath));
+    app.get("/src/*", (_req, res) => {
+      res.status(404).type("text/plain").send("Akses langsung ke berkas mentah /src/* diblokir dalam mode produksi. Gunakan aset dist/ yang telah terkompilasi.");
+    });
+    if (fs.existsSync(distDir)) {
+      app.use(import_express.default.static(distDir));
+    }
     app.get("*", (_req, res) => {
-      const indexPath = path.resolve(distPath, "index.html");
-      if (fs.existsSync(indexPath)) {
+      const validHtmlPath = findCompiledProductionHtml();
+      if (validHtmlPath) {
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
-        res.sendFile(indexPath);
-      } else {
-        res.status(200).send(`
-          <!DOCTYPE html>
-          <html lang="id">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Celebes Event - Status Server</title>
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
-                .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 36px; max-width: 520px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-                h2 { color: #38bdf8; margin-top: 0; font-size: 22px; }
-                p { color: #94a3b8; line-height: 1.6; font-size: 14px; }
-                .badge { display: inline-block; background: #059669; color: #fff; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px; }
-                .code { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; text-align: left; margin: 16px 0; }
-              </style>
-            </head>
-            <body>
-              <div class="card">
-                <span class="badge">Node.js Server Berjalan</span>
-                <h2>Celebes Event Siap Digunakan!</h2>
-                <p>Backend server berhasil aktif. Namun folder tampilan frontend <code>dist/</code> belum terkompilasi di hosting.</p>
-                <div class="code">
-                  # Jalankan perintah ini di Terminal cPanel:<br>
-                  <strong>npm run build</strong>
-                </div>
-                <p style="font-size: 13px;">Setelah build selesai, refresh halaman ini atau restart Node.js app di cPanel.</p>
-              </div>
-            </body>
-          </html>
-        `);
+        return res.sendFile(validHtmlPath);
       }
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="id">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Celebes Event - Status Server Hosting</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
+              .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 36px; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: left; }
+              h2 { color: #38bdf8; margin-top: 0; font-size: 20px; text-align: center; }
+              p { color: #94a3b8; line-height: 1.6; font-size: 13px; }
+              .badge { display: inline-block; background: #059669; color: #fff; font-size: 11px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px; }
+              .code { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; margin: 16px 0; }
+              .warn { background: #451a03; border: 1px solid #78350f; color: #fde68a; padding: 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; margin: 14px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div style="text-align: center;"><span class="badge">Node.js Server Berjalan Normal</span></div>
+              <h2>Celebes Event Siap Tayang</h2>
+              <div class="warn">
+                <strong>Pemberitahuan Pemasangan:</strong><br>
+                Backend Node.js telah aktif, namun folder tampilan frontend produksi (<code>dist/</code> atau <code>public/index.html</code>) belum ditemukan di hosting.
+              </div>
+              <p>Untuk mengaktifkan tampilan visual, lakukan salah satu langkah mudah berikut:</p>
+              <div class="code">
+                # Opsi 1 (Melalui Terminal cPanel):<br>
+                <strong>npm run build</strong>
+              </div>
+              <p>Atau unduh paket siap pakai <code>celebesevent-siap-tayang-root.zip</code> dan ekstrak langsung ke direktori hosting Anda.</p>
+            </div>
+          </body>
+        </html>
+      `);
     });
   }
   if (isProduction && process.env.PORT) {
@@ -49786,6 +50182,9 @@ async function startServer() {
   }
 }
 startServer();
+export {
+  getSuperAdminCredentials
+};
 /*! Bundled license information:
 
 depd/index.js:

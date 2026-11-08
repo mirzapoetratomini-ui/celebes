@@ -338,4 +338,35 @@ export interface NationalEventLink {
   createdAt: string;
 }
 
+export type NewsCategory = 
+  | 'Event Musik & Konser'
+  | 'Event Olahraga'
+  | 'Running & Marathon'
+  | 'Festival Budaya & Wisata'
+  | 'Pameran & Konferensi'
+  | 'Informasi & Tips Event';
+
+export interface EventNews {
+  id: string;
+  title: string;
+  slug: string;
+  category: NewsCategory;
+  summary: string;
+  content: string;
+  imageUrl: string;
+  author: string;
+  authorRole?: string;
+  eventDate?: string;
+  eventLocation?: string;
+  readTime: string;
+  viewsCount: number;
+  isFeatured: boolean;
+  status: 'published' | 'draft';
+  tags: string[];
+  publishedAt: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+
 

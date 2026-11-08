@@ -25,16 +25,42 @@
   RewriteEngine On
   RewriteBase /
 
-  # Serve existing files directly
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
+  # 1. Block direct requests to uncompiled source TypeScript / JSX files
+  RewriteRule ^src/.*$ - [R=404,L]
 
-  # Check dist/assets for /assets/* requests
+  # 2. Map /assets/* to dist/assets/ or public/assets/ or assets/
   RewriteCond %{DOCUMENT_ROOT}/dist/assets/$1 -f
   RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
 
-  # Check root assets for /assets/* requests
+  RewriteCond %{DOCUMENT_ROOT}/public/assets/$1 -f
+  RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+
   RewriteCond %{DOCUMENT_ROOT}/assets/$1 -f
   RewriteRule ^assets/(.*)$ assets/$1 [L]
+
+  # 3. Pass API and backend endpoints to Node.js / Passenger
+  RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  RewriteCond %{REQUEST_URI} ^/download-
+  RewriteRule ^ - [L]
+
+  # 4. If dist/index.html exists, serve it for root URL /
+  RewriteCond %{REQUEST_URI} ^/$
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^$ dist/index.html [L]
+
+  # 5. Fallback for root / if public/index.html exists
+  RewriteCond %{REQUEST_URI} ^/$
+  RewriteCond %{DOCUMENT_ROOT}/public/index.html -f
+  RewriteRule ^$ public/index.html [L]
+
+  # 6. Serve existing physical static files (images, zip, favicon, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # 7. For all SPA routes, fallback to compiled production index.html
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^.*$ dist/index.html [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/public/index.html -f
+  RewriteRule ^.*$ public/index.html [L]
 </IfModule>

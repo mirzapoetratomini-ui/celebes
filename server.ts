@@ -3,8 +3,8 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
-import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_VOUCHERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_SUPPORT_TICKETS, INITIAL_FAQS, INITIAL_SENT_EMAILS, INITIAL_NATIONAL_EVENTS } from './src/data/seedData';
-import { EventItem, Order, User, Voucher, PayoutRequest, Ticket, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink } from './src/types';
+import { INITIAL_USERS, INITIAL_EVENTS, INITIAL_ORDERS, INITIAL_VOUCHERS, INITIAL_PAYOUTS, DEFAULT_PLATFORM_SETTINGS, INITIAL_SUPPORT_TICKETS, INITIAL_FAQS, INITIAL_SENT_EMAILS, INITIAL_NATIONAL_EVENTS, INITIAL_EVENT_NEWS } from './src/data/seedData';
+import { EventItem, Order, User, Voucher, PayoutRequest, Ticket, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, NationalEventLink, EventNews } from './src/types';
 import { verifyAndCheckInTicket } from './src/utils/ticketing-logic';
 
 import { fileURLToPath } from 'url';
@@ -92,6 +92,7 @@ let memorySupportTickets: SupportTicket[] = JSON.parse(JSON.stringify(INITIAL_SU
 let memoryFaqs: FaqItem[] = JSON.parse(JSON.stringify(INITIAL_FAQS));
 let memorySentEmails: SentEmailNotification[] = JSON.parse(JSON.stringify(INITIAL_SENT_EMAILS));
 let memoryNationalEvents: NationalEventLink[] = JSON.parse(JSON.stringify(INITIAL_NATIONAL_EVENTS));
+let memoryNews: EventNews[] = JSON.parse(JSON.stringify(INITIAL_EVENT_NEWS));
 
 function generateCreatorApprovalEmail(user: User): SentEmailNotification {
   return {
@@ -161,6 +162,7 @@ function saveLocalData() {
       faqs: memoryFaqs,
       sentEmails: memorySentEmails,
       nationalEvents: memoryNationalEvents,
+      news: memoryNews,
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(LOCAL_STORAGE_FILE, JSON.stringify(dataToSave, null, 2), 'utf8');
@@ -184,6 +186,7 @@ function loadLocalData() {
       if (Array.isArray(parsed.faqs)) memoryFaqs = parsed.faqs;
       if (Array.isArray(parsed.sentEmails)) memorySentEmails = parsed.sentEmails;
       if (Array.isArray(parsed.nationalEvents)) memoryNationalEvents = parsed.nationalEvents;
+      if (Array.isArray(parsed.news)) memoryNews = parsed.news;
       console.log('[Storage] Data lokal berhasil dimuat dari database/local_data.json');
     }
   } catch (err) {
@@ -268,34 +271,57 @@ function toMysqlDatetime(isoOrDateStr?: string | null): string {
 // DATABASE HELPER FUNCTIONS (MySQL with Memory Fallback)
 // ----------------------------------------------------
 
+export function getSuperAdminCredentials() {
+  const email = (process.env.SUPERADMIN_EMAIL || 'redaksibergulircom@gmail.com').trim().toLowerCase();
+  const password = (process.env.SUPERADMIN_PASSWORD || 'Bergulir2026!#').trim();
+  const name = (process.env.SUPERADMIN_NAME || 'Super Admin Bergulir Media').trim();
+  return { email, password, name };
+}
+
 async function getUsersFromDb(): Promise<User[]> {
+  const { email: adminEmail, password: adminPassword, name: adminName } = getSuperAdminCredentials();
   await ensureMysql();
   if (isMysqlActive && mysqlPool) {
     try {
       const [rows]: any = await mysqlPool.query(`SELECT * FROM users ORDER BY created_at DESC`);
       if (Array.isArray(rows)) {
-        return rows.map((r: any) => ({
-          id: r.id,
-          email: r.email,
-          name: r.name,
-          password: r.password_hash || '',
-          role: r.role,
-          avatar: r.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80',
-          phone: r.phone || '',
-          organization: r.organization || '',
-          auth_provider: r.auth_provider || 'local',
-          status: r.status,
-          bankName: r.bank_name || '',
-          bankAccountNumber: r.bank_account_number || '',
-          bankAccountName: r.bank_account_name || '',
-          createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ''),
-        }));
+        return rows.map((r: any) => {
+          const isSuperAdmin = r.id === 'usr-admin-bergulir' || r.role === 'admin' || (r.email && r.email.toLowerCase() === adminEmail);
+          return {
+            id: r.id,
+            email: isSuperAdmin ? adminEmail : r.email,
+            name: isSuperAdmin && adminName ? adminName : r.name,
+            password: isSuperAdmin && adminPassword ? adminPassword : (r.password_hash || ''),
+            role: r.role,
+            avatar: r.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80',
+            phone: r.phone || '',
+            organization: r.organization || '',
+            auth_provider: r.auth_provider || 'local',
+            status: r.status,
+            bankName: r.bank_name || '',
+            bankAccountNumber: r.bank_account_number || '',
+            bankAccountName: r.bank_account_name || '',
+            createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ''),
+          };
+        });
       }
     } catch (err: any) {
       console.warn('[Database] Query users gagal, menggunakan memori:', err.message);
     }
   }
-  return memoryUsers;
+
+  // Sync memory users with environment variable settings
+  return memoryUsers.map(u => {
+    if (u.id === 'usr-admin-bergulir' || u.role === 'admin' || u.email.toLowerCase() === adminEmail) {
+      return {
+        ...u,
+        email: adminEmail,
+        name: adminName || u.name,
+        password: adminPassword,
+      };
+    }
+    return u;
+  });
 }
 
 async function getEventsFromDb(params?: { category?: string; search?: string; status?: string; creatorId?: string }): Promise<EventItem[]> {
@@ -1458,23 +1484,33 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   const cleanEmail = email.trim().toLowerCase();
   const users = await getUsersFromDb();
 
-  // 1. Super Admin Match
-  if (cleanEmail === 'redaksibergulircom@gmail.com' || cleanEmail === 'admin@celebes-event.com' || cleanEmail.includes('admin@')) {
+  // 1. Super Admin Match (Strict Environment Variables Verification)
+  const { email: superAdminEmail, password: superAdminPassword, name: superAdminName } = getSuperAdminCredentials();
+
+  if (cleanEmail === superAdminEmail || cleanEmail === 'redaksibergulircom@gmail.com' || cleanEmail === 'mirza.tomini@gmail.com') {
     const adminUser = users.find(u => u.role === 'admin' && (u.email.toLowerCase() === cleanEmail || u.id === 'usr-admin-bergulir')) || users[0];
     
-    // Strict password verification for Super Admin
-    const isValidAdminPassword = (cleanEmail === 'redaksibergulircom@gmail.com' && password === 'Bergulir2026!#') ||
-      (cleanEmail === 'admin@celebes-event.com' && (password === 'demo123' || password === 'Bergulir2026!#')) ||
-      (adminUser && adminUser.password && adminUser.password === password) ||
-      (password === 'Bergulir2026!#');
+    // Strict password verification:
+    // Only accept the password set in Environment Variables (.env SUPERADMIN_PASSWORD) or DB hash
+    const isValidAdminPassword = (password === superAdminPassword) || (adminUser && adminUser.password && adminUser.password === password);
 
     if (!isValidAdminPassword) {
-      return res.status(401).json({ success: false, message: 'Password Super Admin salah! Masukkan password resmi Bergulir Media.' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Password Super Admin salah! Pastikan password sesuai dengan variabel SUPERADMIN_PASSWORD di file .env server Anda.' 
+      });
     }
+
+    const safeAdminUser = {
+      ...adminUser,
+      email: superAdminEmail,
+      name: superAdminName || adminUser.name,
+    };
+    delete safeAdminUser.password;
 
     return res.json({ 
       success: true, 
-      user: adminUser, 
+      user: safeAdminUser, 
       message: 'Login Super Admin Berhasil! Selamat datang di Pusat Kendali Celebes Event.' 
     });
   }
@@ -1765,27 +1801,160 @@ app.post('/api/faqs', async (req: Request, res: Response) => {
   res.status(201).json(newFaq);
 });
 
+// 12. Berita & Informasi Event Indonesia (Super Admin Managed)
+app.get('/api/news', (req: Request, res: Response) => {
+  const { category, all, search } = req.query;
+  let results = [...memoryNews];
+
+  if (all !== 'true') {
+    results = results.filter(n => n.status === 'published');
+  }
+
+  if (category && category !== 'Semua') {
+    results = results.filter(n => n.category.toLowerCase() === String(category).toLowerCase());
+  }
+
+  if (search) {
+    const q = String(search).toLowerCase();
+    results = results.filter(n => 
+      n.title.toLowerCase().includes(q) || 
+      n.summary.toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q) ||
+      (n.tags && n.tags.some(t => t.toLowerCase().includes(q)))
+    );
+  }
+
+  // Sort: featured first, then publishedAt desc
+  results.sort((a, b) => {
+    if (a.isFeatured && !b.isFeatured) return -1;
+    if (!a.isFeatured && b.isFeatured) return 1;
+    return new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime();
+  });
+
+  res.json(results);
+});
+
+app.get('/api/news/:idOrSlug', (req: Request, res: Response) => {
+  const param = req.params.idOrSlug;
+  const newsItem = memoryNews.find(n => n.id === param || n.slug === param);
+  if (!newsItem) {
+    return res.status(404).json({ error: 'Berita tidak ditemukan' });
+  }
+
+  // Increment views
+  newsItem.viewsCount = (newsItem.viewsCount || 0) + 1;
+  saveLocalData();
+
+  res.json(newsItem);
+});
+
+app.post('/api/news', (req: Request, res: Response) => {
+  const newsData = req.body;
+  if (!newsData.title || !newsData.category || !newsData.content) {
+    return res.status(400).json({ error: 'Judul, kategori, dan isi berita wajib diisi!' });
+  }
+
+  const newId = `news-${Date.now()}`;
+  const slug = newsData.slug || newsData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+  const newNews: EventNews = {
+    id: newId,
+    title: newsData.title,
+    slug,
+    category: newsData.category,
+    summary: newsData.summary || newsData.content.slice(0, 160) + '...',
+    content: newsData.content,
+    imageUrl: newsData.imageUrl || 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80',
+    author: newsData.author || 'Redaksi Celebes Event',
+    authorRole: newsData.authorRole || 'Redaksi Berita & Liputan Event',
+    eventDate: newsData.eventDate || '',
+    eventLocation: newsData.eventLocation || '',
+    readTime: newsData.readTime || '3 menit baca',
+    viewsCount: 0,
+    isFeatured: Boolean(newsData.isFeatured),
+    status: newsData.status || 'published',
+    tags: Array.isArray(newsData.tags) ? newsData.tags : (newsData.tags ? String(newsData.tags).split(',').map((t: string) => t.trim()) : []),
+    publishedAt: newsData.publishedAt || new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryNews.unshift(newNews);
+  saveLocalData();
+  res.status(201).json(newNews);
+});
+
+app.put('/api/news/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updateData = req.body;
+  const index = memoryNews.findIndex(n => n.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Berita tidak ditemukan' });
+  }
+
+  memoryNews[index] = {
+    ...memoryNews[index],
+    ...updateData,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveLocalData();
+  res.json(memoryNews[index]);
+});
+
+app.delete('/api/news/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  memoryNews = memoryNews.filter(n => n.id !== id);
+  saveLocalData();
+  res.json({ success: true, message: 'Berita berhasil dihapus' });
+});
+
 // ==========================================
 // STATIC FILES & VITE MIDDLEWARES
 // ==========================================
 
 async function startServer() {
-  const candidateDistPaths = [
-    path.resolve(APP_ROOT, 'dist'),
-    path.resolve(detectedDir, 'dist'),
-    path.resolve(process.cwd(), 'dist'),
-    path.resolve('./dist')
-  ];
-  const distPath = candidateDistPaths.find(p => fs.existsSync(path.resolve(p, 'index.html'))) || candidateDistPaths[0];
+  function findCompiledProductionHtml(): string | null {
+    const candidates = [
+      path.resolve(APP_ROOT, 'dist', 'index.html'),
+      path.resolve(detectedDir, 'dist', 'index.html'),
+      path.resolve(process.cwd(), 'dist', 'index.html'),
+      path.resolve('./dist/index.html'),
+      path.resolve(APP_ROOT, 'public', 'index.html'),
+      path.resolve(detectedDir, 'public', 'index.html'),
+      path.resolve(process.cwd(), 'public', 'index.html'),
+      path.resolve(APP_ROOT, 'index.html'),
+      path.resolve(detectedDir, 'index.html'),
+      path.resolve(process.cwd(), 'index.html'),
+    ];
+
+    for (const c of candidates) {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        try {
+          const content = fs.readFileSync(c, 'utf8');
+          // Valid production HTML must link to built assets and NOT require unbundled /src/main.tsx
+          if (!content.includes('/src/main.tsx') && !content.includes('src/main.tsx')) {
+            return c;
+          }
+        } catch {}
+      }
+    }
+    return null;
+  }
+
+  const productionHtml = findCompiledProductionHtml();
+  const distDir = productionHtml ? path.dirname(productionHtml) : path.resolve(APP_ROOT, 'dist');
 
   const assetCandidateDirs = [
-    path.resolve(distPath, 'assets'),
+    path.resolve(distDir, 'assets'),
     path.resolve(APP_ROOT, 'dist', 'assets'),
     path.resolve(detectedDir, 'dist', 'assets'),
+    path.resolve(APP_ROOT, 'public', 'assets'),
+    path.resolve(detectedDir, 'public', 'assets'),
+    path.resolve(process.cwd(), 'public', 'assets'),
     path.resolve(APP_ROOT, 'assets'),
     path.resolve(detectedDir, 'assets'),
     path.resolve(process.cwd(), 'assets'),
-    path.resolve(APP_ROOT, 'public', 'assets'),
   ];
 
   // Dedicated assets router with strict MIME type enforcement
@@ -1806,7 +1975,7 @@ async function startServer() {
   }
 
   // Fallback explicit asset file resolver (guarantees .js and .css files are NEVER served as index.html)
-  app.get('/assets/:file', (req: Request, res: Response, next) => {
+  app.get('/assets/:file', (req: Request, res: Response) => {
     const fileName = path.basename(req.params.file);
     for (const dir of assetCandidateDirs) {
       const fullPath = path.resolve(dir, fileName);
@@ -1834,48 +2003,60 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Serve static root files from distPath
-    app.use(express.static(distPath));
+    // Block uncompiled /src/* direct requests in production
+    app.get('/src/*', (_req: Request, res: Response) => {
+      res.status(404).type('text/plain').send('Akses langsung ke berkas mentah /src/* diblokir dalam mode produksi. Gunakan aset dist/ yang telah terkompilasi.');
+    });
+
+    // Serve static root files from distDir
+    if (fs.existsSync(distDir)) {
+      app.use(express.static(distDir));
+    }
 
     app.get('*', (_req: Request, res: Response) => {
-      const indexPath = path.resolve(distPath, 'index.html');
-      if (fs.existsSync(indexPath)) {
+      const validHtmlPath = findCompiledProductionHtml();
+      if (validHtmlPath) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
-        res.sendFile(indexPath);
-      } else {
-        res.status(200).send(`
-          <!DOCTYPE html>
-          <html lang="id">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Celebes Event - Status Server</title>
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
-                .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 36px; max-width: 520px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-                h2 { color: #38bdf8; margin-top: 0; font-size: 22px; }
-                p { color: #94a3b8; line-height: 1.6; font-size: 14px; }
-                .badge { display: inline-block; background: #059669; color: #fff; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px; }
-                .code { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; text-align: left; margin: 16px 0; }
-              </style>
-            </head>
-            <body>
-              <div class="card">
-                <span class="badge">Node.js Server Berjalan</span>
-                <h2>Celebes Event Siap Digunakan!</h2>
-                <p>Backend server berhasil aktif. Namun folder tampilan frontend <code>dist/</code> belum terkompilasi di hosting.</p>
-                <div class="code">
-                  # Jalankan perintah ini di Terminal cPanel:<br>
-                  <strong>npm run build</strong>
-                </div>
-                <p style="font-size: 13px;">Setelah build selesai, refresh halaman ini atau restart Node.js app di cPanel.</p>
-              </div>
-            </body>
-          </html>
-        `);
+        return res.sendFile(validHtmlPath);
       }
+
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="id">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Celebes Event - Status Server Hosting</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
+              .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 36px; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: left; }
+              h2 { color: #38bdf8; margin-top: 0; font-size: 20px; text-align: center; }
+              p { color: #94a3b8; line-height: 1.6; font-size: 13px; }
+              .badge { display: inline-block; background: #059669; color: #fff; font-size: 11px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px; }
+              .code { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: #38bdf8; margin: 16px 0; }
+              .warn { background: #451a03; border: 1px solid #78350f; color: #fde68a; padding: 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; margin: 14px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div style="text-align: center;"><span class="badge">Node.js Server Berjalan Normal</span></div>
+              <h2>Celebes Event Siap Tayang</h2>
+              <div class="warn">
+                <strong>Pemberitahuan Pemasangan:</strong><br>
+                Backend Node.js telah aktif, namun folder tampilan frontend produksi (<code>dist/</code> atau <code>public/index.html</code>) belum ditemukan di hosting.
+              </div>
+              <p>Untuk mengaktifkan tampilan visual, lakukan salah satu langkah mudah berikut:</p>
+              <div class="code">
+                # Opsi 1 (Melalui Terminal cPanel):<br>
+                <strong>npm run build</strong>
+              </div>
+              <p>Atau unduh paket siap pakai <code>celebesevent-siap-tayang-root.zip</code> dan ekstrak langsung ke direktori hosting Anda.</p>
+            </div>
+          </body>
+        </html>
+      `);
     });
   }
 

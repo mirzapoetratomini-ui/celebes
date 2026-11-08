@@ -10,7 +10,8 @@ import {
   ChevronDown,
   User as UserIcon,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Newspaper
 } from 'lucide-react';
 import { User, UserRole, PlatformSettings } from '../types';
 
@@ -19,8 +20,8 @@ interface NavbarProps {
   onOpenLoginModal: (mode?: 'login' | 'register_creator' | 'register_user') => void;
   onLogout: () => void;
   onOpenCreateEvent: () => void;
-  activeTab: 'browse' | 'my-tickets' | 'creator-studio' | 'admin-portal';
-  setActiveTab: (tab: 'browse' | 'my-tickets' | 'creator-studio' | 'admin-portal') => void;
+  activeTab: 'browse' | 'my-tickets' | 'news' | 'creator-studio' | 'admin-portal';
+  setActiveTab: (tab: 'browse' | 'my-tickets' | 'news' | 'creator-studio' | 'admin-portal') => void;
   settings?: PlatformSettings;
   onOpenHelpCenter?: () => void;
 }
@@ -97,6 +98,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Ticket className="w-4 h-4 text-emerald-600" />
             <span>Tiket Saya</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('news')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'news'
+                ? 'bg-blue-50 text-blue-700 font-bold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Newspaper className="w-4 h-4 text-purple-600" />
+            <span>Kabar & Berita Event</span>
           </button>
 
           {currentUser && (currentUser.role === 'creator' || currentUser.role === 'admin') && (
@@ -295,6 +308,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Ticket className="w-4 h-4" />
           <span>Tiket</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('news')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-md ${
+            activeTab === 'news' ? 'text-blue-600 font-bold' : 'text-slate-600'
+          }`}
+        >
+          <Newspaper className="w-4 h-4" />
+          <span>Berita</span>
         </button>
 
         {currentUser && (currentUser.role === 'creator' || currentUser.role === 'admin') && (

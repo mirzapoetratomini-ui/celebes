@@ -48,7 +48,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Login State
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [loginRole, setLoginRole] = useState<'admin' | 'creator' | 'user'>('admin');
+  const [loginRole, setLoginRole] = useState<'creator' | 'user'>('user');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoadingLogin, setIsLoadingLogin] = useState(false);
 
@@ -110,12 +110,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Autofill helper for official demo credentials (requires explicit password verification)
-  const handleFillCredentials = (role: 'admin' | 'creator' | 'user') => {
-    if (role === 'admin') {
-      setLoginEmail('redaksibergulircom@gmail.com');
-      setLoginPassword('Bergulir2026!#');
-    } else if (role === 'creator') {
+  // Autofill helper for demo creator and participant testing accounts
+  const handleFillCredentials = (role: 'creator' | 'user') => {
+    if (role === 'creator') {
       setLoginEmail('kreator@celebescreative.id');
       setLoginPassword('kreator123');
     } else {
@@ -142,6 +139,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       const res = await api.login(loginEmail.trim(), loginPassword.trim());
+      
+      // Super Admin is separated: only allowed via dedicated footer login
+      if (res.user.role === 'admin') {
+        setLoginError('Portal ini khusus untuk Peserta dan Kreator Event. Akses Super Administrator Pusat telah dipindahkan ke tombol logo tersembunyi di footer bawah website.');
+        setIsLoadingLogin(false);
+        return;
+      }
+
       if (res.user.role === 'creator' && res.user.status === 'pending_approval') {
         setNotification(`Selamat datang, ${res.user.name}! Akun Anda sedang dalam proses verifikasi & menunggu persetujuan Super Admin.`);
       } else {
