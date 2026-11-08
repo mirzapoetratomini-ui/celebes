@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   calculateOrderTotals,
+  calculateHybridSplitFee,
   validateCustomResponses,
   generateTicketCode,
   generateQrPayload,
@@ -133,3 +134,12 @@ test('platform fee deduction: calculates 2% percentage and fixed Rp2.000 deducti
   assert.equal(net2, 498000);
 });
 
+test('calculateHybridSplitFee: correctly splits base ticket price, Rp 2.000 user fee, and 2% creator deduction (Blueprint v3)', () => {
+  const result = calculateHybridSplitFee(100000);
+  assert.equal(result.hargaTiketAsli, 100000);
+  assert.equal(result.biayaAdminUser, 2000);
+  assert.equal(result.totalBayarUser, 102000);
+  assert.equal(result.komisiPlatformKreator, 2000); // 2% of 100000
+  assert.equal(result.netPendapatanKreator, 98000); // 100000 - 2000
+  assert.equal(result.totalMarginPlatform, 4000); // 2000 + 2000
+});

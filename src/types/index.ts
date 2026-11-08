@@ -20,6 +20,7 @@ export interface User {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
+  walletBalance?: number;
   createdAt: string;
 }
 
@@ -140,6 +141,13 @@ export interface Order {
   verifiedBy?: string;
   verifiedAt?: string;
   rejectionReason?: string;
+  creatorId?: string;
+  creatorName?: string;
+  hargaTiketAsli?: number;
+  biayaAdminUser?: number;
+  potonganKreator?: number;
+  netPendapatanKreator?: number;
+  totalMarginPlatform?: number;
   tickets: Ticket[];
   createdAt: string;
   paidAt?: string;
@@ -282,6 +290,17 @@ export interface PlatformSettings {
   aboutUs: AboutUsContent;
   servicePackages: ServicePackage[];
   gallery: GalleryItem[];
+  manualBankAccounts?: ManualBankAccount[];
+}
+
+export interface ManualBankAccount {
+  id: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  isActive: boolean;
+  notes?: string;
 }
 
 export interface SupportTicket {

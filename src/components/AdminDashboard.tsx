@@ -38,9 +38,10 @@ import {
   Plus,
   Trash2,
   FileText,
-  Newspaper
+  Newspaper,
+  Building2
 } from 'lucide-react';
-import { EventItem, Order, PayoutRequest, User, DatabaseStatus, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification } from '../types';
+import { EventItem, Order, PayoutRequest, User, DatabaseStatus, PlatformSettings, SupportTicket, FaqItem, SentEmailNotification, ManualBankAccount } from '../types';
 import { DEFAULT_PLATFORM_SETTINGS } from '../data/seedData';
 import { formatRupiah } from '../utils/ticketing-logic';
 import { api } from '../services/api';
@@ -88,7 +89,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adminReplyStatus, setAdminReplyStatus] = useState<'in_progress' | 'resolved'>('resolved');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
-  // Manual payment state for Super Admin
+  // Manual payment state for Super Admin (Blueprint v3: Approval & Master Data Rekening)
+  const [adminManualSubTab, setAdminManualSubTab] = useState<'approvals' | 'accounts'>('approvals');
   const adminManualOrders = orders.filter(o => o.paymentType === 'manual' || o.paymentMethod === 'bank_transfer_manual');
   const adminPendingCount = adminManualOrders.filter(o => o.paymentStatus === 'pending_manual_verification').length;
   const [adminManualFilter, setAdminManualFilter] = useState<'all' | 'pending' | 'paid' | 'rejected'>('all');
@@ -96,6 +98,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adminRejectOrder, setAdminRejectOrder] = useState<Order | null>(null);
   const [adminRejectReason, setAdminRejectReason] = useState('Nominal transfer tidak sesuai tagihan / mutasi bank belum terdata');
   const [adminActionToast, setAdminActionToast] = useState<string | null>(null);
+
+  // Master Data Rekening State
+  const [isAddingBank, setIsAddingBank] = useState(false);
+  const [newBankName, setNewBankName] = useState('');
+  const [newBankCode, setNewBankCode] = useState('');
+  const [newAccountNumber, setNewAccountNumber] = useState('');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+
+  const currentBankAccounts = settingsForm.manualBankAccounts || DEFAULT_PLATFORM_SETTINGS.manualBankAccounts || [];
+
+  const handleSaveBankAccounts = async (updatedAccounts: ManualBankAccount[]) => {
+    const updated = {
+      ...settingsForm,
+      manualBankAccounts: updatedAccounts,
+    };
+    setSettingsForm(updated);
+    try {
+      const res = await api.updateSettings({ manualBankAccounts: updatedAccounts });
+      if (res.success) {
+        onUpdatePlatformSettings?.(res.settings);
+        setAdminActionToast('Master data rekening berhasil disimpan dan diperbarui di aplikasi!');
+        setTimeout(() => setAdminActionToast(null), 3000);
+      }
+    } catch (err: any) {
+      alert('Gagal menyimpan rekening: ' + err.message);
+    }
+  };
+
+  const handleAddBankAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBankName.trim() || !newAccountNumber.trim() || !newAccountName.trim()) {
+      alert('Nama Bank, Nomor Rekening, dan Atas Nama wajib diisi.');
+      return;
+    }
+    const newAccount: ManualBankAccount = {
+      id: `bank-${Date.now()}`,
+      bankName: newBankName.trim(),
+      bankCode: newBankCode.trim().toUpperCase() || 'BANK',
+      accountNumber: newAccountNumber.trim(),
+      accountName: newAccountName.trim(),
+      notes: newNotes.trim() || undefined,
+      isActive: true,
+    };
+    await handleSaveBankAccounts([...currentBankAccounts, newAccount]);
+    setNewBankName('');
+    setNewBankCode('');
+    setNewAccountNumber('');
+    setNewAccountName('');
+    setNewNotes('');
+    setIsAddingBank(false);
+  };
+
+  const handleToggleBankAccountActive = async (id: string) => {
+    const updated = currentBankAccounts.map(b => (b.id === id ? { ...b, isActive: !b.isActive } : b));
+    await handleSaveBankAccounts(updated);
+  };
+
+  const handleDeleteBankAccount = async (id: string) => {
+    if (!confirm('Hapus rekening bank ini dari master data platform?')) return;
+    const updated = currentBankAccounts.filter(b => b.id !== id);
+    await handleSaveBankAccounts(updated);
+  };
 
   // Creator Approval & Moderation State
   const [userSubTab, setUserSubTab] = useState<'all' | 'pending' | 'creators' | 'emails'>('all');
@@ -160,6 +225,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setDeleteUserError(err.message || 'Gagal menghapus akun pengguna');
     } finally {
       setIsDeletingUser(false);
+    }
+  };
+
+  // State Hapus Transaksi (Order) oleh Super Admin
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+  const [deleteOrderError, setDeleteOrderError] = useState<string | null>(null);
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setIsDeletingOrder(true);
+    setDeleteOrderError(null);
+    try {
+      const res = await api.deleteOrder(orderToDelete.id);
+      setApprovalActionToast(res.message || 'Transaksi berhasil dihapus dan kuota tiket telah dikembalikan.');
+      setOrderToDelete(null);
+      onRefreshData();
+      setTimeout(() => setApprovalActionToast(null), 4000);
+    } catch (err: any) {
+      setDeleteOrderError(err.message || 'Gagal menghapus transaksi');
+    } finally {
+      setIsDeletingOrder(false);
+    }
+  };
+
+  // State Hapus Event oleh Super Admin
+  const [eventToDelete, setEventToDelete] = useState<EventItem | null>(null);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+  const [deleteEventError, setDeleteEventError] = useState<string | null>(null);
+
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    setIsDeletingEvent(true);
+    setDeleteEventError(null);
+    try {
+      const res = await api.deleteEvent(eventToDelete.id);
+      setApprovalActionToast(res.message || 'Event beserta seluruh tiket terkait berhasil dihapus.');
+      setEventToDelete(null);
+      onRefreshData();
+      setTimeout(() => setApprovalActionToast(null), 4000);
+    } catch (err: any) {
+      setDeleteEventError(err.message || 'Gagal menghapus event');
+    } finally {
+      setIsDeletingEvent(false);
+    }
+  };
+
+  // State Hapus Payout oleh Super Admin
+  const [payoutToDelete, setPayoutToDelete] = useState<PayoutRequest | null>(null);
+  const [isDeletingPayout, setIsDeletingPayout] = useState(false);
+  const [deletePayoutError, setDeletePayoutError] = useState<string | null>(null);
+
+  const handleDeletePayout = async () => {
+    if (!payoutToDelete) return;
+    setIsDeletingPayout(true);
+    setDeletePayoutError(null);
+    try {
+      const res = await api.deletePayout(payoutToDelete.id);
+      setApprovalActionToast(res.message || 'Pengajuan pencairan dana berhasil dihapus.');
+      setPayoutToDelete(null);
+      onRefreshData();
+      setTimeout(() => setApprovalActionToast(null), 4000);
+    } catch (err: any) {
+      setDeletePayoutError(err.message || 'Gagal menghapus pengajuan pencairan');
+    } finally {
+      setIsDeletingPayout(false);
+    }
+  };
+
+  // State Hapus Support Ticket oleh Super Admin
+  const [supportToDelete, setSupportToDelete] = useState<SupportTicket | null>(null);
+  const [isDeletingSupport, setIsDeletingSupport] = useState(false);
+  const [deleteSupportError, setDeleteSupportError] = useState<string | null>(null);
+
+  const handleDeleteSupportTicket = async () => {
+    if (!supportToDelete) return;
+    setIsDeletingSupport(true);
+    setDeleteSupportError(null);
+    try {
+      const res = await api.deleteSupportTicket(supportToDelete.id);
+      setApprovalActionToast(res.message || 'Tiket pengaduan kendala berhasil dihapus.');
+      setSupportTickets(prev => prev.filter(t => t.id !== supportToDelete.id));
+      setSupportToDelete(null);
+      setTimeout(() => setApprovalActionToast(null), 4000);
+    } catch (err: any) {
+      setDeleteSupportError(err.message || 'Gagal menghapus tiket kendala');
+    } finally {
+      setIsDeletingSupport(false);
     }
   };
 
@@ -380,17 +533,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleTestQrisPing = () => {
-    const { provider, merchantId, serverKey, isSandbox } = settingsForm.qrisConfig;
-    if (!merchantId || !serverKey) {
-      setQrisTestResult('⚠️ Masukkan Merchant ID dan Server Key sebelum melakukan uji koneksi.');
-      return;
+  const [isTestingMidtrans, setIsTestingMidtrans] = useState(false);
+  const [midtransTestDetails, setMidtransTestDetails] = useState<any>(null);
+
+  const handleTestQrisPing = async () => {
+    const { serverKey, isSandbox } = settingsForm.qrisConfig;
+    setIsTestingMidtrans(true);
+    setQrisTestResult(null);
+    setMidtransTestDetails(null);
+    try {
+      const res = await api.testMidtransConnection({
+        serverKey: serverKey?.trim() || undefined,
+        isSandbox,
+      });
+      setQrisTestResult(res.message);
+      setMidtransTestDetails(res.details || null);
+    } catch (err: any) {
+      setQrisTestResult(`❌ Gagal terhubung ke Midtrans API: ${err.message || 'Periksa koneksi jaringan'}`);
+    } finally {
+      setIsTestingMidtrans(false);
     }
-    setQrisTestResult(
-      `✅ Berhasil terhubung ke Sandbox/Gateway ${provider.toUpperCase()} (Merchant ID: ${merchantId}, Mode: ${
-        isSandbox ? 'Sandbox/Uji Coba' : 'Production Live'
-      }). Callback Webhook QRIS siap menerima notifikasi.`
-    );
   };
 
   // Support Ticket Reply Handler
@@ -807,12 +969,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </span>
                       </td>
                       <td className="p-3">
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-3">
                           <button
                             onClick={() => handleToggleEventStatus(event, event.status === 'published' ? 'draft' : 'published')}
                             className="text-xs text-blue-600 font-bold hover:underline"
                           >
                             {event.status === 'published' ? 'Tutup Pendaftaran' : 'Buka Publik'}
+                          </button>
+                          <button
+                            onClick={() => setEventToDelete(event)}
+                            className="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-transparent hover:border-rose-200"
+                            title="Hapus Event"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Hapus</span>
                           </button>
                         </div>
                       </td>
@@ -1310,6 +1480,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <th className="p-3">Komisi</th>
                   <th className="p-3">Total Tagihan</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1335,6 +1506,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       }`}>
                         {o.paymentStatus.toUpperCase()}
                       </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setOrderToDelete(o)}
+                        className="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 border border-transparent hover:border-rose-200"
+                        title="Hapus Transaksi"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1406,24 +1588,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </span>
                     </td>
                     <td className="p-3">
-                      {p.status === 'pending' ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleApprovePayout(p.id)}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
-                          >
-                            Setujui & Transfer
-                          </button>
-                          <button
-                            onClick={() => handleRejectPayout(p.id)}
-                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold"
-                          >
-                            Tolak
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs italic">Selesai diproses</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {p.status === 'pending' ? (
+                          <>
+                            <button
+                              onClick={() => handleApprovePayout(p.id)}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
+                            >
+                              Setujui & Transfer
+                            </button>
+                            <button
+                              onClick={() => handleRejectPayout(p.id)}
+                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold"
+                            >
+                              Tolak
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">Selesai diproses</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setPayoutToDelete(p)}
+                          className="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 border border-transparent hover:border-rose-200"
+                          title="Hapus Pengajuan Pencairan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1439,185 +1632,455 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <AdminNewsManager onRefreshData={onRefreshData} />
       )}
 
-      {/* TAB: VERIFIKASI PEMBAYARAN MANUAL (SELURUH PLATFORM) */}
+      {/* TAB: VERIFIKASI PEMBAYARAN MANUAL & MASTER DATA REKENING (BLUEPRINT V3) */}
       {activeTab === 'manual-payments' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
-                  Platform Oversight Hub
+          {/* Sub-Navigation for Manual Payments */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAdminManualSubTab('approvals')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  adminManualSubTab === 'approvals'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Approval Verifikasi Transaksi</span>
+                {adminPendingCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-900 font-extrabold text-[10px]">
+                    {adminPendingCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminManualSubTab('accounts')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  adminManualSubTab === 'accounts'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Manajemen Rekening (Master Data)</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">
+                  {currentBankAccounts.filter(b => b.isActive !== false).length} Aktif
                 </span>
-                <span className="text-xs text-slate-400">•</span>
-                <span className="text-xs text-slate-500">{adminPendingCount} Menunggu Verifikasi</span>
+              </button>
+            </div>
+
+            {adminManualSubTab === 'accounts' && !isAddingBank && (
+              <button
+                type="button"
+                onClick={() => setIsAddingBank(true)}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Rekening Baru</span>
+              </button>
+            )}
+          </div>
+
+          {/* SUB-VIEW 1: MASTER DATA REKENING (BLUEPRINT V3 PAGE 5) */}
+          {adminManualSubTab === 'accounts' && (
+            <div className="space-y-6">
+              {/* Form Tambah Rekening */}
+              {isAddingBank && (
+                <form
+                  onSubmit={handleAddBankAccount}
+                  className="bg-white rounded-2xl border border-purple-200 p-6 shadow-sm space-y-4 animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-purple-600" />
+                      Tambah Rekening Tujuan Pembayaran Manual
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingBank(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Nama Bank *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newBankName}
+                        onChange={(e) => setNewBankName(e.target.value)}
+                        placeholder="Contoh: Bank BCA / Bank Mandiri / Bank Sulselbar"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Kode Bank / Singkatan</label>
+                      <input
+                        type="text"
+                        value={newBankCode}
+                        onChange={(e) => setNewBankCode(e.target.value)}
+                        placeholder="Contoh: BCA / MANDIRI / SULSELBAR"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Nomor Rekening *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newAccountNumber}
+                        onChange={(e) => setNewAccountNumber(e.target.value)}
+                        placeholder="Contoh: 888-019-2831"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Atas Nama (Pemilik Rekening) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newAccountName}
+                        onChange={(e) => setNewAccountName(e.target.value)}
+                        placeholder="Contoh: PT CELEBES EVENT DIGITAL"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-bold text-slate-700 mb-1">Catatan / Instruksi Pembeli (Opsional)</label>
+                      <input
+                        type="text"
+                        value={newNotes}
+                        onChange={(e) => setNewNotes(e.target.value)}
+                        placeholder="Contoh: Gratis biaya transfer antar bank atau sertakan berita transfer nomor order"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingBank(false)}
+                      className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                    >
+                      Simpan Rekening ke Master Data
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Grid of Bank Accounts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentBankAccounts.map((account) => {
+                  const isActive = account.isActive !== false;
+                  return (
+                    <div
+                      key={account.id}
+                      className={`p-5 rounded-2xl border transition-all ${
+                        isActive
+                          ? 'bg-white border-slate-200 shadow-xs'
+                          : 'bg-slate-50 border-dashed border-slate-300 opacity-75'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800">
+                          {account.bankCode || 'BANK'}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBankAccountActive(account.id)}
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors ${
+                              isActive
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                            }`}
+                          >
+                            {isActive ? '● Aktif di Checkout' : '○ Nonaktif'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBankAccount(account.id)}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer transition-colors"
+                            title="Hapus Rekening"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <h4 className="font-extrabold text-slate-900 text-base">{account.bankName}</h4>
+                      
+                      <div className="mt-3 p-3 bg-slate-950 text-white rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Nomor Rekening:</span>
+                          <span className="font-mono font-bold text-sm text-emerald-400 tracking-wider">
+                            {account.accountNumber}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(account.accountNumber.replace(/-/g, ''));
+                            alert(`Nomor rekening ${account.bankName} berhasil disalin!`);
+                          }}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs cursor-pointer"
+                          title="Salin Nomor"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 text-xs space-y-1 text-slate-600">
+                        <div>
+                          <span className="text-slate-400 text-[10px] block">Atas Nama:</span>
+                          <span className="font-semibold text-slate-800">{account.accountName}</span>
+                        </div>
+                        {account.notes && (
+                          <div className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200/60 mt-2">
+                            {account.notes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <h2 className="text-xl font-extrabold text-slate-900">
-                Pusat Verifikasi Pembayaran Manual Seluruh Event
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Super admin dapat meninjau, menyetujui, atau menganulir verifikasi transfer manual untuk seluruh event.
-              </p>
-            </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-1.5 overflow-x-auto self-start sm:self-auto">
-              <button
-                onClick={() => setAdminManualFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  adminManualFilter === 'all'
-                    ? 'bg-purple-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Semua ({adminManualOrders.length})
-              </button>
-              <button
-                onClick={() => setAdminManualFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  adminManualFilter === 'pending'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
-                }`}
-              >
-                <span>Menunggu ({adminPendingCount})</span>
-              </button>
-              <button
-                onClick={() => setAdminManualFilter('paid')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  adminManualFilter === 'paid'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Disetujui ({adminManualOrders.filter(o => o.paymentStatus === 'paid').length})
-              </button>
-              <button
-                onClick={() => setAdminManualFilter('rejected')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  adminManualFilter === 'rejected'
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Ditolak ({adminManualOrders.filter(o => o.paymentStatus === 'payment_rejected').length})
-              </button>
+              <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-900 flex items-start gap-3">
+                <Building2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block mb-0.5">Integrasi Master Data Real-Time (Blueprint v3):</strong>
+                  <span>
+                    Rekening berstatus <strong>Aktif</strong> otomatis dimuat secara langsung di pilihan bank tujuan pembayaran pembeli pada modal checkout. Pembeli dapat memilih salah satu rekening resmi di atas untuk melakukan transfer manual.
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Table of Manual Verification Orders */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-700 font-bold border-b">
-                  <tr>
-                    <th className="p-3">Order & Waktu</th>
-                    <th className="p-3">Event</th>
-                    <th className="p-3">Pendaftar (Buyer)</th>
-                    <th className="p-3">Rincian Bank Pengirim</th>
-                    <th className="p-3">Total Transfer</th>
-                    <th className="p-3">Bukti Struk</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Tindakan Super Admin</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {adminManualOrders
-                    .filter(o => {
-                      if (adminManualFilter === 'pending') return o.paymentStatus === 'pending_manual_verification';
-                      if (adminManualFilter === 'paid') return o.paymentStatus === 'paid';
-                      if (adminManualFilter === 'rejected') return o.paymentStatus === 'payment_rejected';
-                      return true;
-                    })
-                    .map(order => {
-                      const isPending = order.paymentStatus === 'pending_manual_verification';
-                      const isPaid = order.paymentStatus === 'paid';
-                      const isRejected = order.paymentStatus === 'payment_rejected';
+          {/* SUB-VIEW 2: APPROVAL VERIFIKASI TRANSAKSI */}
+          {adminManualSubTab === 'approvals' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
+                      Platform Oversight Hub
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs text-slate-500">{adminPendingCount} Menunggu Verifikasi</span>
+                  </div>
+                  <h2 className="text-xl font-extrabold text-slate-900">
+                    Pusat Verifikasi Pembayaran Manual Seluruh Event
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Super admin dapat meninjau, menyetujui, atau menganulir verifikasi transfer manual dengan distribusi bagi hasil otomatis (Blueprint v3).
+                  </p>
+                </div>
 
-                      return (
-                        <tr key={order.id} className="hover:bg-slate-50">
-                          <td className="p-3">
-                            <span className="font-mono font-bold text-blue-700 block">{order.orderNumber}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </td>
-                          <td className="p-3 truncate max-w-[150px] font-medium text-slate-900">
-                            {order.eventTitle}
-                          </td>
-                          <td className="p-3">
-                            <span className="font-bold text-slate-900 block">{order.buyerName}</span>
-                            <span className="text-[10px] text-slate-500 block">{order.buyerPhone}</span>
-                          </td>
-                          <td className="p-3">
-                            <span className="font-semibold text-slate-800 block">{order.senderBank || 'Bank Transfer'}</span>
-                            <span className="text-[10px] text-slate-500 block">a.n {order.senderAccountName || order.buyerName}</span>
-                          </td>
-                          <td className="p-3 font-extrabold text-blue-700 text-sm">
-                            {formatRupiah(order.totalAmount)}
-                          </td>
-                          <td className="p-3">
-                            {order.paymentProofUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => setAdminPreviewProof(order)}
-                                className="p-1 rounded-lg border border-slate-200 hover:border-blue-500 bg-white flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <img
-                                  src={order.paymentProofUrl}
-                                  alt="Bukti"
-                                  className="w-8 h-8 object-cover rounded-md"
-                                />
-                                <span className="text-[10px] font-bold text-blue-600">Zoom</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic">Tidak ada foto</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              isPending
-                                ? 'bg-amber-100 text-amber-800'
-                                : isPaid
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {isPending ? 'PENDING' : isPaid ? 'LUNAS' : 'DITOLAK'}
-                            </span>
-                          </td>
-                          <td className="p-3">
-                            {isPending ? (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleAdminApprove(order)}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                                >
-                                  Setujui
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setAdminRejectOrder(order);
-                                    setAdminRejectReason('Bukti transfer tidak sesuai atau mutasi bank belum terdata');
-                                  }}
-                                  className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 cursor-pointer"
-                                >
-                                  Tolak
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 text-xs italic">
-                                {isPaid ? 'Sudah Disetujui' : 'Sudah Ditolak'}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+                {/* Filters */}
+                <div className="flex items-center gap-1.5 overflow-x-auto self-start sm:self-auto">
+                  <button
+                    onClick={() => setAdminManualFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminManualFilter === 'all'
+                        ? 'bg-purple-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Semua ({adminManualOrders.length})
+                  </button>
+                  <button
+                    onClick={() => setAdminManualFilter('pending')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      adminManualFilter === 'pending'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                    }`}
+                  >
+                    <span>Menunggu ({adminPendingCount})</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminManualFilter('paid')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminManualFilter === 'paid'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Disetujui ({adminManualOrders.filter(o => o.paymentStatus === 'paid').length})
+                  </button>
+                  <button
+                    onClick={() => setAdminManualFilter('rejected')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      adminManualFilter === 'rejected'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Ditolak ({adminManualOrders.filter(o => o.paymentStatus === 'payment_rejected').length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Table of Manual Verification Orders */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-700 font-bold border-b">
+                      <tr>
+                        <th className="p-3">Order & Waktu</th>
+                        <th className="p-3">Event & Kreator</th>
+                        <th className="p-3">Pendaftar (Buyer)</th>
+                        <th className="p-3">Rekening Pengirim</th>
+                        <th className="p-3">Total Bayar</th>
+                        <th className="p-3">Distribusi Dana (Split Fee)</th>
+                        <th className="p-3">Bukti Struk</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Tindakan Super Admin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {adminManualOrders
+                        .filter(o => {
+                          if (adminManualFilter === 'pending') return o.paymentStatus === 'pending_manual_verification';
+                          if (adminManualFilter === 'paid') return o.paymentStatus === 'paid';
+                          if (adminManualFilter === 'rejected') return o.paymentStatus === 'payment_rejected';
+                          return true;
+                        })
+                        .map(order => {
+                          const isPending = order.paymentStatus === 'pending_manual_verification';
+                          const isPaid = order.paymentStatus === 'paid';
+                          const isRejected = order.paymentStatus === 'payment_rejected';
+
+                          const hargaAsli = order.hargaTiketAsli || order.subtotal;
+                          const adminFee = order.biayaAdminUser || order.platformFee || 2000;
+                          const komisiKreator = order.potonganKreator || Math.round(hargaAsli * 0.02);
+                          const netKreator = order.netPendapatanKreator || (hargaAsli - komisiKreator);
+
+                          return (
+                            <tr key={order.id} className="hover:bg-slate-50">
+                              <td className="p-3">
+                                <span className="font-mono font-bold text-blue-700 block">{order.orderNumber}</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </td>
+                              <td className="p-3 truncate max-w-[150px]">
+                                <span className="font-medium text-slate-900 block truncate">{order.eventTitle}</span>
+                                <span className="text-[10px] text-purple-700 block">{order.creatorName || 'Kreator Event'}</span>
+                              </td>
+                              <td className="p-3">
+                                <span className="font-bold text-slate-900 block">{order.buyerName}</span>
+                                <span className="text-[10px] text-slate-500 block">{order.buyerPhone}</span>
+                              </td>
+                              <td className="p-3">
+                                <span className="font-semibold text-slate-800 block">{order.senderBank || 'Bank Transfer'}</span>
+                                <span className="text-[10px] text-slate-500 block truncate max-w-[120px]">a.n {order.senderAccountName || order.buyerName}</span>
+                              </td>
+                              <td className="p-3 font-extrabold text-blue-700 text-sm">
+                                {formatRupiah(order.totalAmount)}
+                              </td>
+                              <td className="p-3 text-[11px] space-y-0.5">
+                                <div className="text-slate-600">
+                                  Asli: <span className="font-semibold">{formatRupiah(hargaAsli)}</span>
+                                </div>
+                                <div className="text-emerald-700 font-bold">
+                                  Net Kreator: {formatRupiah(netKreator)}
+                                </div>
+                                <div className="text-[10px] text-purple-700">
+                                  Margin: {formatRupiah(adminFee + komisiKreator)} (Rp 2k + 2%)
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                {order.paymentProofUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAdminPreviewProof(order)}
+                                    className="p-1 rounded-lg border border-slate-200 hover:border-blue-500 bg-white flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <img
+                                      src={order.paymentProofUrl}
+                                      alt="Bukti"
+                                      className="w-8 h-8 object-cover rounded-md"
+                                    />
+                                    <span className="text-[10px] font-bold text-blue-600">Zoom</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">Tidak ada foto</span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isPending
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : isPaid
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {isPending ? 'PENDING' : isPaid ? 'LUNAS' : 'DITOLAK'}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-1.5">
+                                  {isPending ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAdminApprove(order)}
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                      >
+                                        Setujui
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setAdminRejectOrder(order);
+                                          setAdminRejectReason('Bukti transfer tidak sesuai atau mutasi bank belum terdata');
+                                        }}
+                                        className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 cursor-pointer"
+                                      >
+                                        Tolak
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs italic">
+                                      {isPaid ? 'Sudah Disetujui' : 'Sudah Ditolak'}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => setOrderToDelete(order)}
+                                    className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 border border-transparent hover:border-rose-200"
+                                    title="Hapus Transaksi"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -2719,10 +3182,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
               <button
                 type="button"
+                disabled={isTestingMidtrans}
                 onClick={handleTestQrisPing}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 border border-slate-300"
               >
-                Uji Koneksi (Ping Gateway)
+                <RefreshCw className={`w-3.5 h-3.5 ${isTestingMidtrans ? 'animate-spin text-blue-600' : ''}`} />
+                <span>{isTestingMidtrans ? 'Menguji API...' : 'Uji Kredensial Midtrans'}</span>
               </button>
               <button
                 type="submit"
@@ -2736,11 +3201,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {qrisTestResult && (
-            <div className="p-4 bg-slate-900 text-white rounded-2xl text-xs font-mono border border-slate-800 flex items-start gap-3">
+            <div className={`p-4 rounded-2xl text-xs font-mono border flex items-start gap-3 ${
+              qrisTestResult.includes('❌') || qrisTestResult.includes('⚠️')
+                ? 'bg-rose-950 text-rose-100 border-rose-800'
+                : 'bg-slate-900 text-white border-slate-800'
+            }`}>
               <QrCode className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <span className="font-bold text-emerald-400 block mb-0.5">Diagnostik API Gateway QRIS:</span>
-                <p className="text-slate-300 leading-relaxed">{qrisTestResult}</p>
+                <span className="font-bold text-emerald-400 block mb-0.5">Diagnostik API Gateway Midtrans:</span>
+                <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{qrisTestResult}</p>
+                {midtransTestDetails && (
+                  <div className="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-0.5">
+                    <div>Status HTTP: <strong className="text-white">{midtransTestDetails.httpStatus}</strong> ({midtransTestDetails.endpoint})</div>
+                    <div>Mode: <strong className="text-white">{midtransTestDetails.isSandbox ? 'Sandbox (Uji Coba)' : 'Production (Live)'}</strong></div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2834,15 +3309,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Webhook URL Callback Notification</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={settingsForm.qrisConfig.webhookUrl || `${window.location.origin}/api/webhooks/qris`}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-slate-600 text-[11px]"
-                  />
+                  <label className="block font-bold text-slate-700 mb-1">Webhook URL Notification (Midtrans MAP)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/api/midtrans/notification`}
+                      className="flex-1 p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-mono text-slate-600 text-[11px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/midtrans/notification`);
+                        alert('URL Webhook Midtrans berhasil disalin ke clipboard!');
+                      }}
+                      className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+                      title="Salin Webhook URL"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Salin</span>
+                    </button>
+                  </div>
                   <span className="text-[10px] text-slate-400 mt-1 block">
-                    Salin URL ini dan tempel di dashboard merchant penyedia pembayaran Anda pada menu Webhook Settings.
+                    Tempel URL ini pada dashboard <strong>Midtrans MAP (Merchant Administration Portal) &gt; Settings &gt; Configuration &gt; Payment Notification URL</strong>.
                   </span>
                 </div>
 
@@ -3058,17 +3547,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="p-3">
-                          <button
-                            onClick={() => {
-                              setSelectedTicketForReply(ticket);
-                              setAdminReplyText(ticket.adminReply || '');
-                              setAdminReplyStatus(ticket.status === 'resolved' ? 'resolved' : 'in_progress');
-                            }}
-                            className="px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-lg border border-purple-200 text-xs flex items-center gap-1 cursor-pointer"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Tanggapi</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedTicketForReply(ticket);
+                                setAdminReplyText(ticket.adminReply || '');
+                                setAdminReplyStatus(ticket.status === 'resolved' ? 'resolved' : 'in_progress');
+                              }}
+                              className="px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-lg border border-purple-200 text-xs flex items-center gap-1 cursor-pointer"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>Tanggapi</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSupportToDelete(ticket)}
+                              className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 border border-transparent hover:border-rose-200"
+                              title="Hapus Tiket Kendala"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -3192,14 +3691,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-2xl text-left text-xs space-y-1.5 border border-slate-200">
+              <div className="p-4 bg-slate-50 rounded-2xl text-left text-xs space-y-2 border border-slate-200">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Nama Pendaftar:</span>
                   <span className="font-bold text-slate-800">{adminPreviewProof.buyerName} ({adminPreviewProof.buyerEmail})</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Event:</span>
-                  <span className="font-bold text-slate-800">{adminPreviewProof.eventTitle}</span>
+                  <span className="text-slate-500">Event & Kreator:</span>
+                  <span className="font-bold text-slate-800">{adminPreviewProof.eventTitle} ({adminPreviewProof.creatorName || 'Kreator'})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Bank Pengirim:</span>
@@ -3209,16 +3708,56 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="text-slate-500">Nama Pemilik Rekening:</span>
                   <span className="font-bold text-slate-800">{adminPreviewProof.senderAccountName}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Jumlah Tagihan:</span>
-                  <span className="font-bold text-blue-700">{formatRupiah(adminPreviewProof.totalAmount)}</span>
-                </div>
                 {adminPreviewProof.transferNotes && (
-                  <div className="flex justify-between text-slate-600 pt-1 border-t border-slate-200">
+                  <div className="flex justify-between text-slate-600">
                     <span className="text-slate-500">Catatan Pengirim:</span>
                     <span className="italic">{adminPreviewProof.transferNotes}</span>
                   </div>
                 )}
+
+                {/* Financial Split Fee Breakdown (Blueprint v3) */}
+                <div className="pt-2 border-t border-slate-200 space-y-1.5 bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                  <span className="text-[10px] font-bold text-purple-900 uppercase tracking-wider block">
+                    Distribusi Finansial & Bagi Hasil (Blueprint v3)
+                  </span>
+                  
+                  {(() => {
+                    const hargaAsli = adminPreviewProof.hargaTiketAsli || adminPreviewProof.subtotal;
+                    const adminFee = adminPreviewProof.biayaAdminUser || adminPreviewProof.platformFee || 2000;
+                    const komisiKreator = adminPreviewProof.potonganKreator || Math.round(hargaAsli * 0.02);
+                    const netKreator = adminPreviewProof.netPendapatanKreator || (hargaAsli - komisiKreator);
+                    const totalMargin = adminPreviewProof.totalMarginPlatform || (adminFee + komisiKreator);
+
+                    return (
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Harga Tiket Asli:</span>
+                          <span className="font-semibold text-slate-900">{formatRupiah(hargaAsli)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Biaya Admin Platform (User):</span>
+                          <span className="font-semibold text-blue-700">+{formatRupiah(adminFee)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-700 font-bold pt-1 border-t border-purple-100">
+                          <span>Total Tagihan Dibayar User:</span>
+                          <span className="text-blue-800">{formatRupiah(adminPreviewProof.totalAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-purple-700">
+                          <span>Komisi Platform (2% dari Kreator):</span>
+                          <span>{formatRupiah(komisiKreator)}</span>
+                        </div>
+                        <div className="flex justify-between text-emerald-700 font-bold pt-1 border-t border-purple-100">
+                          <span>Alokasi Saldo Dompet Kreator:</span>
+                          <span className="text-emerald-800 font-extrabold">{formatRupiah(netKreator)}</span>
+                        </div>
+                        <div className="flex justify-between text-purple-950 font-bold">
+                          <span>Total Margin Platform (Celebes Event):</span>
+                          <span className="text-purple-700 font-extrabold">{formatRupiah(totalMargin)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -3297,6 +3836,215 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 Tolak Pembayaran
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS TRANSAKSI (ORDER) */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Transaksi</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Menghapus transaksi ini akan membatalkan seluruh tiket di dalamnya dan mengembalikan kuota tiket ke event terkait secara permanen.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1 font-mono">
+                <div><strong className="font-sans text-slate-700">Nomor Order:</strong> <span className="font-bold text-blue-700">{orderToDelete.orderNumber}</span></div>
+                <div><strong className="font-sans text-slate-700">Pembeli:</strong> {orderToDelete.buyerName} ({orderToDelete.buyerPhone})</div>
+                <div><strong className="font-sans text-slate-700">Event:</strong> {orderToDelete.eventTitle}</div>
+                <div><strong className="font-sans text-slate-700">Total:</strong> {formatRupiah(orderToDelete.totalAmount)} ({orderToDelete.paymentStatus.toUpperCase()})</div>
+                <div><strong className="font-sans text-slate-700">Jumlah Tiket:</strong> {orderToDelete.tickets.length} Tiket</div>
+              </div>
+
+              {deleteOrderError && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-medium border border-rose-200">
+                  {deleteOrderError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingOrder}
+                  onClick={() => setOrderToDelete(null)}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingOrder}
+                  onClick={handleDeleteOrder}
+                  className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingOrder ? 'Menghapus...' : 'Ya, Hapus Transaksi'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS EVENT */}
+      {eventToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Event</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Apakah Anda yakin ingin menghapus event ini? Seluruh data tiket, tier pendaftaran, dan formulir event akan terhapus permanen dari sistem.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1">
+                <div className="font-bold text-slate-900">{eventToDelete.title}</div>
+                <div className="text-slate-600 text-[11px]">Kategori: {eventToDelete.category} • Kreator: {eventToDelete.creatorName}</div>
+                <div className="text-slate-500 text-[11px]">
+                  Terjual: {eventToDelete.tickets.reduce((acc, t) => acc + (t.soldCount || 0), 0)} / {eventToDelete.tickets.reduce((acc, t) => acc + t.quota, 0)} kuota
+                </div>
+              </div>
+
+              {deleteEventError && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-medium border border-rose-200">
+                  {deleteEventError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingEvent}
+                  onClick={() => setEventToDelete(null)}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingEvent}
+                  onClick={handleDeleteEvent}
+                  className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingEvent ? 'Menghapus...' : 'Ya, Hapus Event'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS PAYOUT */}
+      {payoutToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Pengajuan Pencairan</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Apakah Anda yakin ingin menghapus catatan pengajuan pencairan dana ini?
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1">
+                <div className="font-bold text-slate-900">{payoutToDelete.creatorName}</div>
+                <div className="text-slate-600 text-[11px]">Event: {payoutToDelete.eventTitle}</div>
+                <div className="font-extrabold text-emerald-700">{formatRupiah(payoutToDelete.netAmount || payoutToDelete.amount)}</div>
+                <div className="text-slate-500 text-[11px] font-mono">{payoutToDelete.bankName} - {payoutToDelete.accountNumber} ({payoutToDelete.accountName})</div>
+              </div>
+
+              {deletePayoutError && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-medium border border-rose-200">
+                  {deletePayoutError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingPayout}
+                  onClick={() => setPayoutToDelete(null)}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingPayout}
+                  onClick={handleDeletePayout}
+                  className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingPayout ? 'Menghapus...' : 'Ya, Hapus'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS SUPPORT TICKET */}
+      {supportToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Tiket Pengaduan</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Apakah Anda yakin ingin menghapus tiket bantuan kendala ini dari daftar?
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1">
+                <div className="font-bold text-blue-700 font-mono">{supportToDelete.ticketNumber}</div>
+                <div className="font-bold text-slate-900">{supportToDelete.subject}</div>
+                <div className="text-slate-600 text-[11px]">Pelapor: {supportToDelete.name} ({supportToDelete.email})</div>
+              </div>
+
+              {deleteSupportError && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl text-xs font-medium border border-rose-200">
+                  {deleteSupportError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingSupport}
+                  onClick={() => setSupportToDelete(null)}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingSupport}
+                  onClick={handleDeleteSupportTicket}
+                  className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingSupport ? 'Menghapus...' : 'Ya, Hapus Tiket'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -19,13 +19,23 @@ export interface FeeConfig {
   percentage: number;
 }
 
+export interface SplitFeeBreakdown {
+  hargaTiketAsli: number;
+  biayaAdminUser: number; // Flat Rp 2.000 per transaksi
+  totalBayarUser: number; // hargaTiketAsli + biayaAdminUser
+  potonganKreator: number; // 2% × hargaTiketAsli
+  pendapatanBersihKreator: number; // hargaTiketAsli - potonganKreator
+  totalMarginPlatform: number; // biayaAdminUser + potonganKreator
+}
+
 /**
  * Calculates subtotal, voucher discount, platform fee, and total payable amount.
+ * Implements Blueprint v3: User pays Base Ticket Price + Flat Admin Fee (Rp 2.000).
  */
 export function calculateOrderTotals(
   items: OrderItemCalc[],
   voucher?: VoucherCalc | null,
-  feeConfig: FeeConfig = { fixed: 4500, percentage: 0 }
+  feeConfig: FeeConfig = { fixed: 2000, percentage: 0 }
 ): {
   subtotal: number;
   discountAmount: number;
@@ -49,7 +59,7 @@ export function calculateOrderTotals(
   let platformFee = 0;
   if (subtotal > 0) {
     const variableFee = Math.round((taxableAmount * (feeConfig.percentage || 0)) / 100);
-    platformFee = (feeConfig.fixed || 0) + variableFee;
+    platformFee = (feeConfig.fixed ?? 2000) + variableFee;
   }
 
   const totalAmount = taxableAmount + platformFee;
@@ -59,6 +69,45 @@ export function calculateOrderTotals(
     discountAmount,
     platformFee,
     totalAmount,
+  };
+}
+
+/**
+ * Hybrid Midtrans Split Fee Calculator according to Blueprint v3:
+ * 1. Total Bayar User = Harga Tiket Asli + Rp 2.000 (Biaya Admin)
+ * 2. Komisi Platform = 2% × Harga Tiket Asli
+ * 3. Pendapatan Bersih Kreator = Harga Tiket Asli - Komisi Platform
+ * 4. Total Pendapatan Platform = Rp 2.000 (dari User) + Komisi Platform (dari Kreator)
+ */
+export function calculateHybridSplitFee(
+  hargaTiketAsli: number,
+  biayaAdminFlat: number = 2000,
+  creatorCommissionPercent: number = 2
+): SplitFeeBreakdown {
+  if (hargaTiketAsli <= 0) {
+    return {
+      hargaTiketAsli: 0,
+      biayaAdminUser: 0,
+      totalBayarUser: 0,
+      potonganKreator: 0,
+      pendapatanBersihKreator: 0,
+      totalMarginPlatform: 0,
+    };
+  }
+
+  const biayaAdminUser = biayaAdminFlat;
+  const totalBayarUser = hargaTiketAsli + biayaAdminUser;
+  const potonganKreator = Math.round((creatorCommissionPercent / 100) * hargaTiketAsli);
+  const pendapatanBersihKreator = Math.max(0, hargaTiketAsli - potonganKreator);
+  const totalMarginPlatform = biayaAdminUser + potonganKreator;
+
+  return {
+    hargaTiketAsli,
+    biayaAdminUser,
+    totalBayarUser,
+    potonganKreator,
+    pendapatanBersihKreator,
+    totalMarginPlatform,
   };
 }
 

@@ -78,10 +78,18 @@ export const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
   // Flattened attendees
   const allMyTickets = myOrders.flatMap(o => o.tickets);
 
-  // Stats calculation
+  // Stats calculation per Blueprint v3 (Split Fee & Net Revenue)
   const totalGrossRevenue = myOrders
     .filter(o => o.paymentStatus === 'paid')
-    .reduce((acc, o) => acc + o.subtotal, 0);
+    .reduce((acc, o) => acc + (o.hargaTiketAsli || o.subtotal), 0);
+
+  const totalCreatorCommission = myOrders
+    .filter(o => o.paymentStatus === 'paid')
+    .reduce((acc, o) => acc + (o.potonganKreator || Math.round((o.hargaTiketAsli || o.subtotal) * 0.02)), 0);
+
+  const totalNetCreatorEarnings = myOrders
+    .filter(o => o.paymentStatus === 'paid')
+    .reduce((acc, o) => acc + (o.netPendapatanKreator || ((o.hargaTiketAsli || o.subtotal) - (o.potonganKreator || Math.round((o.hargaTiketAsli || o.subtotal) * 0.02)))), 0);
 
   const totalTicketsSold = allMyTickets.length;
   const totalCheckedIn = allMyTickets.filter(t => t.checkInStatus === 'checked_in').length;
@@ -530,12 +538,22 @@ export const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-800">
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60">
-            <span className="text-[11px] text-slate-400 block font-medium">Total Omzet Tiket (Gross)</span>
+            <span className="text-[11px] text-slate-400 block font-medium">Omzet Penjualan Tiket (Gross)</span>
             <span className="text-lg sm:text-xl font-extrabold text-white mt-1 block">
               {formatRupiah(totalGrossRevenue)}
             </span>
-            <span className="text-[10px] text-emerald-400 font-semibold mt-1 block">
+            <span className="text-[10px] text-slate-400 font-semibold mt-1 block">
               Dari {myOrders.filter(o => o.paymentStatus === 'paid').length} transaksi lunas
+            </span>
+          </div>
+
+          <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60">
+            <span className="text-[11px] text-slate-400 block font-medium">Saldo Bersih Kreator (Net)</span>
+            <span className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1 block">
+              {formatRupiah(totalNetCreatorEarnings)}
+            </span>
+            <span className="text-[10px] text-emerald-300 font-semibold mt-1 block">
+              Setelah komisi platform 2% ({formatRupiah(totalCreatorCommission)})
             </span>
           </div>
 
@@ -551,21 +569,11 @@ export const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
 
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60">
             <span className="text-[11px] text-slate-400 block font-medium">Peserta Hadir (Check-in)</span>
-            <span className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1 block">
+            <span className="text-lg sm:text-xl font-extrabold text-purple-400 mt-1 block">
               {totalCheckedIn} / {totalTicketsSold}
             </span>
-            <span className="text-[10px] text-emerald-400 mt-1 block">
-              Tervalidasi di pintu masuk
-            </span>
-          </div>
-
-          <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60">
-            <span className="text-[11px] text-slate-400 block font-medium">Event Aktif</span>
-            <span className="text-lg sm:text-xl font-extrabold text-amber-400 mt-1 block">
-              {myEvents.filter(e => e.status === 'published').length} Event
-            </span>
             <span className="text-[10px] text-slate-400 mt-1 block">
-              Siap menerima pendaftaran
+              Tervalidasi di scanner gerbang
             </span>
           </div>
         </div>
@@ -1645,7 +1653,7 @@ export const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
                   />
                   <span className="text-[10px] text-slate-500 mt-1 block">
-                    Saldo kotor penjualan Anda: <strong>{formatRupiah(totalGrossRevenue)}</strong>
+                    Saldo bersih siap ditarik: <strong className="text-emerald-700">{formatRupiah(totalNetCreatorEarnings)}</strong> (Omzet Kotor Asli: {formatRupiah(totalGrossRevenue)} - Komisi Platform 2%: {formatRupiah(totalCreatorCommission)})
                   </span>
                 </div>
 

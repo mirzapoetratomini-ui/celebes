@@ -72,7 +72,7 @@ export const api = {
     return await res.json();
   },
 
-  async deleteEvent(id: string): Promise<{ success: boolean }> {
+  async deleteEvent(id: string): Promise<{ success: boolean; message?: string }> {
     const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Gagal menghapus event');
     return await res.json();
@@ -121,6 +121,39 @@ export const api = {
       body: JSON.stringify({ status, rejectionReason, verifiedBy }),
     });
     if (!res.ok) throw new Error('Gagal memverifikasi pembayaran');
+    return await res.json();
+  },
+
+  async deleteOrder(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Gagal menghapus transaksi order');
+    return data;
+  },
+
+  // Midtrans Payment Gateway API
+  async testMidtransConnection(payload: { serverKey?: string; isSandbox?: boolean }): Promise<{ success: boolean; message: string; environment?: string; details?: any }> {
+    const res = await fetch('/api/midtrans/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
+  async createMidtransSnapTransaction(payload: any): Promise<{ success: boolean; token?: string; redirectUrl?: string; mode: string; message?: string }> {
+    const res = await fetch('/api/midtrans/create-transaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
+  async checkMidtransStatus(orderNumber: string): Promise<{ isPaid: boolean; status: string; message: string; order?: Order; details?: any }> {
+    const res = await fetch(`/api/midtrans/status/${encodeURIComponent(orderNumber)}`);
     return await res.json();
   },
 
@@ -177,6 +210,15 @@ export const api = {
     });
     if (!res.ok) throw new Error('Gagal mengupdate status pencairan');
     return await res.json();
+  },
+
+  async deletePayout(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`/api/payouts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Gagal menghapus data pencairan dana');
+    return data;
   },
 
   // Users & Authentication
@@ -313,6 +355,15 @@ export const api = {
     });
     if (!res.ok) throw new Error('Gagal memperbarui status kendala');
     return await res.json();
+  },
+
+  async deleteSupportTicket(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`/api/support-tickets/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Gagal menghapus tiket bantuan');
+    return data;
   },
 
   // FAQs

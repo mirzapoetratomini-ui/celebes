@@ -18,10 +18,13 @@ import {
   Clock,
   FileImage,
   Info,
-  DollarSign
+  DollarSign,
+  RefreshCw,
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { EventItem, Order, TicketTier, User, PaymentMethod, Ticket, Voucher } from '../types';
+import { EventItem, Order, TicketTier, User, PaymentMethod, Ticket, Voucher, PlatformSettings, ManualBankAccount } from '../types';
 import { calculateOrderTotals, formatRupiah, generateTicketCode, generateQrPayload, validateCustomResponses } from '../utils/ticketing-logic';
 import { api } from '../services/api';
 
@@ -31,6 +34,7 @@ interface CheckoutModalProps {
   event: EventItem | null;
   selectedTickets: { tier: TicketTier; quantity: number }[];
   currentUser: User;
+  platformSettings?: PlatformSettings;
   onOrderCompleted: (order: Order) => void;
 }
 
@@ -40,6 +44,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   event,
   selectedTickets,
   currentUser,
+  platformSettings,
   onOrderCompleted,
 }) => {
   // Step 1: Form & Custom Fields; Step 2: Payment
@@ -78,16 +83,78 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [simulatedVaNumber, setSimulatedVaNumber] = useState<string>('');
   const [copiedVa, setCopiedVa] = useState(false);
 
-  // Manual Transfer Form State
-  const [targetBank, setTargetBank] = useState<'bca' | 'mandiri' | 'bsi'>('bca');
+  // Midtrans Live Transaction State
+  const [activePendingOrder, setActivePendingOrder] = useState<Order | null>(null);
+  const [midtransSnapToken, setMidtransSnapToken] = useState<string | null>(null);
+  const [midtransRedirectUrl, setMidtransRedirectUrl] = useState<string | null>(null);
+  const [midtransMode, setMidtransMode] = useState<string>('simulator');
+  const [isCreatingMidtrans, setIsCreatingMidtrans] = useState(false);
+  const [isCheckingMidtransStatus, setIsCheckingMidtransStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isStatusSuccess, setIsStatusSuccess] = useState(false);
+
+  // Dynamic Manual Bank Accounts from platformSettings master data (Blueprint v3)
+  const activeBankAccounts: ManualBankAccount[] = React.useMemo(() => {
+    if (platformSettings?.manualBankAccounts && platformSettings.manualBankAccounts.length > 0) {
+      const activeOnly = platformSettings.manualBankAccounts.filter(b => b.isActive !== false);
+      if (activeOnly.length > 0) return activeOnly;
+    }
+    return [
+      { id: 'bca', bankName: 'Bank BCA', bankCode: 'BCA', accountNumber: '888-019-2831', accountName: 'PT CELEBES EVENT DIGITAL', isActive: true },
+      { id: 'mandiri', bankName: 'Bank Mandiri', bankCode: 'MANDIRI', accountNumber: '137-00-19283-912', accountName: 'CELEBES EVENT INDONESIA', isActive: true },
+      { id: 'bsi', bankName: 'Bank BSI (Syariah)', bankCode: 'BSI', accountNumber: '719-283-0012', accountName: 'CELEBES EVENT SYARIAH', isActive: true },
+    ];
+  }, [platformSettings?.manualBankAccounts]);
+
+  const [selectedBankId, setSelectedBankId] = useState<string>('bca');
+
+  React.useEffect(() => {
+    if (activeBankAccounts.length > 0 && !activeBankAccounts.some(b => b.id === selectedBankId)) {
+      setSelectedBankId(activeBankAccounts[0].id);
+    }
+  }, [activeBankAccounts, selectedBankId]);
+
+  const selectedBankAccount = activeBankAccounts.find(b => b.id === selectedBankId) || activeBankAccounts[0] || {
+    id: 'bca',
+    bankName: 'Bank BCA',
+    bankCode: 'BCA',
+    accountNumber: '888-019-2831',
+    accountName: 'PT CELEBES EVENT DIGITAL',
+    isActive: true,
+  };
+
   const [senderBank, setSenderBank] = useState('Bank BCA');
   const [senderAccountName, setSenderAccountName] = useState(currentUser.name || 'Budi Santoso');
   const [transferProofUrl, setTransferProofUrl] = useState<string>('');
   const [transferNotes, setTransferNotes] = useState('');
   const [manualFormError, setManualFormError] = useState<string | null>(null);
   const [copiedAccountNo, setCopiedAccountNo] = useState(false);
-
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // 15-Minute Expiry Countdown Timer (Blueprint v3: custom_expiry 15 minutes)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(15 * 60);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+
+  React.useEffect(() => {
+    if (step !== 2) return;
+    const timer = setInterval(() => {
+      setSecondsRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsSessionExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   // Flattened tickets list for registration
   const flattenedTickets: { tier: TicketTier; index: number }[] = [];
@@ -97,7 +164,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   });
 
-  // Calculate Totals
+  // Calculate Totals per Blueprint v3: User pays Base Price + Flat Rp 2.000 Platform Admin Fee
   const orderCalcItems = selectedTickets.map(item => ({
     price: item.tier.price,
     quantity: item.quantity,
@@ -108,7 +175,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     appliedVoucher
       ? { discountType: appliedVoucher.discountType, discountValue: appliedVoucher.discountValue }
       : null,
-    { fixed: 4500, percentage: 0 }
+    { fixed: 2000, percentage: 0 }
   );
 
   if (!isOpen || !event) return null;
@@ -178,24 +245,172 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   // Fast sample proof simulation
   const handleUseSampleProof = () => {
-    // Realistic Indonesian mobile banking receipt sample image
     const sampleReceipt = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80';
     setTransferProofUrl(sampleReceipt);
     setManualFormError(null);
   };
 
-  // Final Order Submission (Automatic or Manual)
-  const handleFinalCheckout = async () => {
-    // If manual payment, require proof and sender info
-    if (paymentType === 'manual') {
-      if (!senderAccountName.trim()) {
-        setManualFormError('Nama pemilik rekening pengirim wajib diisi.');
-        return;
+  // Helper to construct tickets
+  const buildTicketObjects = (orderNumber: string) => {
+    return flattenedTickets.map((t, idx) => {
+      const ticketCode = generateTicketCode(event.slug, idx + 1);
+      const qrPayload = generateQrPayload(ticketCode, event.id, buyerEmail);
+      
+      const responses = event.customFields.map(f => ({
+        id: `resp-${Date.now()}-${f.id}-${idx}`,
+        ticketId: `tkt-${Date.now()}-${idx}`,
+        fieldId: f.id,
+        fieldLabel: f.label,
+        responseValue: customResponses[f.id] || '-',
+      }));
+
+      return {
+        id: `tkt-${Date.now()}-${idx}`,
+        orderId: `ord-${Date.now()}`,
+        eventId: event.id,
+        eventTitle: event.title,
+        tierId: t.tier.id,
+        tierName: t.tier.name,
+        ticketCode,
+        qrPayload,
+        attendeeName: buyerName,
+        attendeeEmail: buyerEmail,
+        checkInStatus: 'not_checked_in' as const,
+        createdAt: new Date().toISOString(),
+        responses,
+      };
+    });
+  };
+
+  // 1. Create Pending Automatic Order & Initiate Midtrans Snap
+  const handleStartAutomaticPayment = async () => {
+    setIsCreatingMidtrans(true);
+    setStatusMessage(null);
+    setIsStatusSuccess(false);
+
+    try {
+      const orderNumber = activePendingOrder?.orderNumber || `CE-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      let currentOrder = activePendingOrder;
+      if (!currentOrder) {
+        const createdTickets = buildTicketObjects(orderNumber);
+        const orderPayload: Partial<Order> = {
+          orderNumber,
+          userId: currentUser.id,
+          eventId: event.id,
+          eventTitle: event.title,
+          creatorId: event.creatorId,
+          creatorName: event.creatorName,
+          buyerName,
+          buyerEmail,
+          buyerPhone,
+          subtotal: totals.subtotal,
+          discountAmount: totals.discountAmount,
+          platformFee: totals.platformFee,
+          totalAmount: totals.totalAmount,
+          paymentType: 'automatic',
+          paymentMethod,
+          paymentChannel,
+          paymentStatus: 'pending', // NEVER paid upon creation!
+          paymentReference: paymentMethod === 'qris' ? `QRIS-${Date.now()}` : `VA-${simulatedVaNumber}`,
+          tickets: createdTickets,
+        };
+        currentOrder = await api.createOrder(orderPayload);
+        setActivePendingOrder(currentOrder);
       }
-      if (!transferProofUrl) {
-        setManualFormError('Harap unggah bukti transfer gambar atau klik "Gunakan Contoh Struk" untuk simulasi.');
-        return;
+
+      // Call Midtrans Snap Session Generator
+      const snapRes = await api.createMidtransSnapTransaction({
+        orderNumber: currentOrder.orderNumber,
+        grossAmount: currentOrder.totalAmount,
+        buyerName: currentOrder.buyerName,
+        buyerEmail: currentOrder.buyerEmail,
+        buyerPhone: currentOrder.buyerPhone,
+        items: selectedTickets.map(item => ({
+          id: item.tier.id,
+          name: `${event.title} - ${item.tier.name}`,
+          price: item.tier.price,
+          quantity: item.quantity,
+        })),
+      });
+
+      if (snapRes.success && snapRes.token) {
+        setMidtransSnapToken(snapRes.token);
+        setMidtransRedirectUrl(snapRes.redirectUrl || null);
+        setMidtransMode('midtrans_snap');
+        setStatusMessage('Sesi Midtrans aktif! Silakan bayar menggunakan tombol Midtrans di bawah atau scan QR.');
+      } else {
+        setMidtransMode('simulator');
+        setStatusMessage('Tagihan pembayaran siap. Silakan selesaikan pembayaran lalu tekan "Cek Status Pembayaran".');
       }
+    } catch (err: any) {
+      setStatusMessage('Gagal membuat tagihan: ' + err.message);
+    } finally {
+      setIsCreatingMidtrans(false);
+    }
+  };
+
+  // 2. Check Midtrans Payment Status
+  const handleCheckPaymentStatus = async () => {
+    if (!activePendingOrder) {
+      setStatusMessage('Harap klik "Buat Tagihan Pembayaran" terlebih dahulu.');
+      return;
+    }
+
+    setIsCheckingMidtransStatus(true);
+    setStatusMessage(null);
+
+    try {
+      const checkRes = await api.checkMidtransStatus(activePendingOrder.orderNumber);
+      if (checkRes.isPaid) {
+        setIsStatusSuccess(true);
+        setStatusMessage('🎉 Pembayaran TERDETEKSI LUNAS! E-Ticket resmi telah aktif.');
+        setTimeout(() => {
+          onOrderCompleted(checkRes.order || { ...activePendingOrder, paymentStatus: 'paid' });
+        }, 1200);
+      } else {
+        setIsStatusSuccess(false);
+        setStatusMessage(checkRes.message || 'Pembayaran belum diselesaikan. Status: Menunggu Pembayaran.');
+      }
+    } catch (err: any) {
+      setStatusMessage('Gagal memeriksa status: ' + err.message);
+    } finally {
+      setIsCheckingMidtransStatus(false);
+    }
+  };
+
+  // 3. Sandbox Simulator Confirm (Developer Sandbox Testing Only)
+  const handleSandboxSimulatePaid = async () => {
+    if (!activePendingOrder) return;
+    setIsCheckingMidtransStatus(true);
+    try {
+      const res = await api.payOrder(activePendingOrder.id, `SIMULATED-PAY-${Date.now()}`);
+      setIsStatusSuccess(true);
+      setStatusMessage('🎉 (Uji Coba Sandbox) Pembayaran berhasil disimulasikan LUNAS!');
+      setTimeout(() => {
+        onOrderCompleted(res.order || { ...activePendingOrder, paymentStatus: 'paid' });
+      }, 1000);
+    } catch (err: any) {
+      setStatusMessage('Gagal simulasi: ' + err.message);
+    } finally {
+      setIsCheckingMidtransStatus(false);
+    }
+  };
+
+  // 4. Handle Manual Bank Transfer Checkout (Requires Super Admin Approval)
+  const handleManualCheckout = async () => {
+    if (isSessionExpired) {
+      alert('Sesi pembayaran telah kedaluwarsa (15 menit). Harap ulangi pemesanan tiket.');
+      return;
+    }
+
+    if (!senderAccountName.trim()) {
+      setManualFormError('Nama pemilik rekening pengirim wajib diisi.');
+      return;
+    }
+    if (!transferProofUrl) {
+      setManualFormError('Harap unggah bukti struk transfer atau klik "Gunakan Contoh Struk" untuk simulasi.');
+      return;
     }
 
     setIsProcessingPayment(true);
@@ -203,44 +418,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     try {
       const orderNumber = `TN-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      const isAutomatic = paymentType === 'automatic';
-      const orderStatus = isAutomatic ? 'paid' : 'pending_manual_verification';
-
-      const createdTickets: Ticket[] = flattenedTickets.map((t, idx) => {
-        const ticketCode = generateTicketCode(event.slug, idx + 1);
-        const qrPayload = generateQrPayload(ticketCode, event.id, buyerEmail);
-        
-        const responses = event.customFields.map(f => ({
-          id: `resp-${Date.now()}-${f.id}-${idx}`,
-          ticketId: `tkt-${Date.now()}-${idx}`,
-          fieldId: f.id,
-          fieldLabel: f.label,
-          responseValue: customResponses[f.id] || '-',
-        }));
-
-        return {
-          id: `tkt-${Date.now()}-${idx}`,
-          orderId: `ord-${Date.now()}`,
-          eventId: event.id,
-          eventTitle: event.title,
-          tierId: t.tier.id,
-          tierName: t.tier.name,
-          ticketCode,
-          qrPayload,
-          attendeeName: buyerName,
-          attendeeEmail: buyerEmail,
-          checkInStatus: 'not_checked_in',
-          createdAt: new Date().toISOString(),
-          responses,
-        };
-      });
+      const createdTickets = buildTicketObjects(orderNumber);
 
       const orderPayload: Partial<Order> = {
         orderNumber,
         userId: currentUser.id,
         eventId: event.id,
         eventTitle: event.title,
+        creatorId: event.creatorId,
+        creatorName: event.creatorName,
         buyerName,
         buyerEmail,
         buyerPhone,
@@ -248,21 +434,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         discountAmount: totals.discountAmount,
         platformFee: totals.platformFee,
         totalAmount: totals.totalAmount,
-        paymentType,
-        paymentMethod: isAutomatic ? paymentMethod : 'bank_transfer_manual',
-        paymentChannel: isAutomatic
-          ? paymentChannel
-          : `Transfer Manual ${targetBank.toUpperCase()} (${targetBank === 'bca' ? 'BCA' : targetBank === 'mandiri' ? 'Mandiri' : 'BSI Syariah'})`,
-        paymentStatus: orderStatus,
-        paymentReference: isAutomatic
-          ? (paymentMethod === 'qris' ? `QRIS-${Date.now()}` : `VA-${simulatedVaNumber}`)
-          : `TRF-MANUAL-${Date.now()}`,
-        paymentProofUrl: isAutomatic ? undefined : transferProofUrl,
-        senderBank: isAutomatic ? undefined : senderBank,
-        senderAccountName: isAutomatic ? undefined : senderAccountName,
-        transferNotes: isAutomatic ? undefined : transferNotes,
+        paymentType: 'manual',
+        paymentMethod: 'bank_transfer_manual',
+        paymentChannel: `Transfer Manual ${selectedBankAccount.bankName} (${selectedBankAccount.bankCode})`,
+        paymentStatus: 'pending_manual_verification', // Strictly waiting for admin approval!
+        paymentReference: `TRF-MANUAL-${Date.now()}`,
+        paymentProofUrl: transferProofUrl,
+        senderBank,
+        senderAccountName,
+        transferNotes,
         tickets: createdTickets,
-        paidAt: isAutomatic ? new Date().toISOString() : undefined,
+        paidAt: undefined, // NOT PAID YET!
       };
 
       const finalOrder = await api.createOrder(orderPayload);
@@ -270,18 +452,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       onOrderCompleted(finalOrder);
     } catch (err: any) {
       setIsProcessingPayment(false);
-      alert('Gagal menyelesaikan proses order: ' + err.message);
+      alert('Gagal menyelesaikan proses order manual: ' + err.message);
     }
   };
 
-  const bankDestinations = {
-    bca: { name: 'Bank BCA', accountNo: '888-019-2831', accountName: 'PT TIKET NUSA DIGITAL' },
-    mandiri: { name: 'Bank Mandiri', accountNo: '137-00-19283-912', accountName: 'TIKET NUSA INDONESIA' },
-    bsi: { name: 'Bank BSI (Syariah)', accountNo: '719-283-0012', accountName: 'TIKET NUSA SYARIAH' },
-  };
-
   const handleCopyTargetAccount = () => {
-    navigator.clipboard.writeText(bankDestinations[targetBank].accountNo.replace(/-/g, ''));
+    navigator.clipboard.writeText(selectedBankAccount.accountNumber.replace(/-/g, ''));
     setCopiedAccountNo(true);
     setTimeout(() => setCopiedAccountNo(false), 2000);
   };
@@ -297,7 +473,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               Langkah {step} dari 2 • {step === 1 ? 'Data Pendaftar' : 'Pilihan Pembayaran'}
             </span>
             <h3 className="text-base font-bold text-white">
-              {step === 1 ? 'Formulir Registrasi & Kuesioner' : 'Metode Pembayaran (Otomatis / Manual)'}
+              {step === 1 ? 'Formulir Registrasi & Kuesioner' : 'Metode Pembayaran (Otomatis Midtrans / Manual Transfer)'}
             </h3>
           </div>
           <button
@@ -503,32 +679,76 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {voucherSuccess && <p className="text-xs text-emerald-600">{voucherSuccess}</p>}
               </div>
 
-              {/* Price Calculation Card */}
+              {/* Price Calculation Card per Blueprint v3 */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
                 <div className="flex justify-between text-slate-600">
-                  <span>Subtotal ({flattenedTickets.length} Tiket):</span>
-                  <span>{formatRupiah(totals.subtotal)}</span>
+                  <span>Harga Tiket Asli ({flattenedTickets.length} Tiket):</span>
+                  <span className="font-semibold text-slate-900">{formatRupiah(totals.subtotal)}</span>
                 </div>
                 {totals.discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>Diskon Promo:</span>
+                    <span>Diskon Promo Kupon:</span>
                     <span>-{formatRupiah(totals.discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-600">
-                  <span>Biaya Layanan & Pembayaran:</span>
-                  <span>{formatRupiah(totals.platformFee)}</span>
+                <div className="flex justify-between text-slate-600 items-center">
+                  <div className="flex items-center gap-1.5">
+                    <span>Biaya Admin Platform:</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded-full">Flat Rp 2.000</span>
+                  </div>
+                  <span className="font-semibold text-slate-900">{formatRupiah(totals.platformFee)}</span>
                 </div>
                 <div className="flex justify-between text-slate-900 font-extrabold text-sm pt-2 border-t border-slate-200">
-                  <span>Total Pembayaran:</span>
+                  <span>Total Tagihan Pembeli:</span>
                   <span className="text-blue-700">{formatRupiah(totals.totalAmount)}</span>
                 </div>
               </div>
             </form>
           ) : (
-            /* STEP 2: METODE PEMBAYARAN (OTOMATIS VS MANUAL) */
+            /* STEP 2: METODE PEMBAYARAN (OTOMATIS MIDTRANS VS MANUAL ADMIN) */
             <div className="space-y-5">
               
+              {/* 15-MINUTE COUNTDOWN TIMER BANNER (BLUEPRINT V3: CUSTOM_EXPIRY) */}
+              {!isSessionExpired ? (
+                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
+                    <div>
+                      <span className="font-bold text-amber-950 block">Batas Waktu Pembayaran (15 Menit)</span>
+                      <span className="text-[10px] text-amber-700">Tiket tertahan akan dibebaskan kembali jika waktu habis</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] text-slate-500 block">Sisa Waktu:</span>
+                    <span className="font-mono font-extrabold text-sm text-red-600 bg-white px-2 py-0.5 rounded-lg border border-amber-200 shadow-xs">
+                      {formatTimer(secondsRemaining)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-red-50 rounded-2xl border border-red-200 text-xs text-red-900 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-red-800">
+                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                    <span>Sesi Pembayaran Telah Kedaluwarsa (15 Menit)</span>
+                  </div>
+                  <p className="text-[11px] text-red-700">
+                    Sesuai arsitektur sistem, slot tiket telah dibebaskan kembali ke kuota sistem. Silakan ulangi langkah pemesanan untuk memilih tiket baru.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep(1);
+                      setIsSessionExpired(false);
+                      setSecondsRemaining(15 * 60);
+                      setActivePendingOrder(null);
+                    }}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Ulangi Pemesanan Tiket
+                  </button>
+                </div>
+              )}
+
               {/* MAIN PAYMENT MODE SELECTOR (OTOMATIS VS MANUAL) */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
@@ -549,7 +769,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <span>Pembayaran Otomatis</span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      QRIS / VA • Terverifikasi Instan
+                      Midtrans Snap / QRIS / VA
                     </span>
                   </button>
 
@@ -567,13 +787,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <span>Pembayaran Manual</span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      Transfer Bank & Upload Bukti
+                      Transfer & Verifikasi Admin Pusat
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* OPTION A: PEMBAYARAN OTOMATIS */}
+              {/* STATUS NOTIFICATION BANNER */}
+              {statusMessage && (
+                <div className={`p-3.5 rounded-2xl text-xs font-medium flex items-center justify-between border ${
+                  isStatusSuccess 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {isStatusSuccess ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Clock className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />}
+                    <span>{statusMessage}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* OPTION A: PEMBAYARAN OTOMATIS (MIDTRANS / QRIS) */}
               {paymentType === 'automatic' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -606,7 +840,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       type="button"
                       onClick={() => {
                         setPaymentMethod('virtual_account');
-                        setPaymentChannel('BCA Virtual Account');
+                        setPaymentChannel('Virtual Account');
                       }}
                       className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
                         paymentMethod === 'virtual_account'
@@ -626,75 +860,140 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Automatic Details Box */}
+                  {/* Payment Action Box */}
                   <div className="p-5 rounded-3xl bg-slate-900 text-white space-y-4">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                       <div>
                         <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider block">
-                          Instruksi Otomatis:
+                          Metode Pembayaran Otomatis:
                         </span>
                         <h5 className="font-bold text-sm text-white">{paymentChannel}</h5>
                       </div>
-                      <span className="text-xs font-mono font-bold text-emerald-400">
-                        {formatRupiah(totals.totalAmount)}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">Total Tagihan:</span>
+                        <span className="text-sm font-mono font-bold text-emerald-400">
+                          {formatRupiah(totals.totalAmount)}
+                        </span>
+                      </div>
                     </div>
 
-                    {paymentMethod === 'qris' && (
-                      <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-800/80 p-4 rounded-2xl">
-                        {simulatedQrisUrl && (
-                          <div className="bg-white p-2 rounded-2xl shrink-0 shadow-lg">
-                            <img src={simulatedQrisUrl} alt="QRIS Code" className="w-32 h-32" />
+                    {/* Step indicator: Create Session -> Pay -> Verify */}
+                    {!activePendingOrder ? (
+                      <div className="text-center py-4 space-y-3">
+                        <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+                          Klik tombol di bawah untuk membuat sesi tagihan dan membuka jalur pembayaran Midtrans / QRIS.
+                        </p>
+                        <button
+                          type="button"
+                          disabled={isCreatingMidtrans}
+                          onClick={handleStartAutomaticPayment}
+                          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-500/20 inline-flex items-center gap-2 cursor-pointer transition-all"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>{isCreatingMidtrans ? 'Menyiapkan Sesi...' : 'Lanjutkan ke Pembayaran Otomatis'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Nomor Order Terdaftar:</span>
+                            <span className="font-mono font-bold text-blue-400">{activePendingOrder.orderNumber}</span>
+                          </div>
+                          <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg font-bold text-[10px] flex items-center gap-1">
+                            <Clock className="w-3 h-3 animate-spin" />
+                            <span>Menunggu Pembayaran</span>
+                          </span>
+                        </div>
+
+                        {/* Midtrans Snap Button if live URL available */}
+                        {midtransRedirectUrl && (
+                          <div className="p-4 bg-blue-950/60 rounded-2xl border border-blue-500/30 text-center space-y-2">
+                            <span className="text-xs text-blue-200 block font-medium">Gateway Midtrans Snap Resmi Siap:</span>
+                            <a
+                              href={midtransRedirectUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Buka Jendela Pembayaran Midtrans Snap</span>
+                            </a>
+                            <p className="text-[10px] text-slate-400">
+                              Setelah menyelesaikan pembayaran di Midtrans, kembali ke halaman ini dan tekan tombol "Cek Status Pembayaran".
+                            </p>
                           </div>
                         )}
-                        <div className="text-xs space-y-1.5 text-slate-300">
-                          <p className="font-semibold text-white">Cara Pembayaran QRIS:</p>
-                          <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-400">
-                            <li>Buka aplikasi GoPay, OVO, ShopeePay, Dana, atau BCA/Mandiri Mobile.</li>
-                            <li>Pilih menu <strong>Scan / Bayar QR</strong>.</li>
-                            <li>Arahkan kamera ke QR di samping dan konfirmasi PIN Anda.</li>
-                          </ol>
-                        </div>
-                      </div>
-                    )}
 
-                    {paymentMethod === 'virtual_account' && (
-                      <div className="space-y-3 bg-slate-800/80 p-4 rounded-2xl">
-                        <span className="text-xs text-slate-400 block">Nomor Virtual Account Otomatis:</span>
-                        <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-700">
-                          <span className="text-base font-mono font-extrabold tracking-wider text-emerald-400">
-                            {simulatedVaNumber}
-                          </span>
+                        {paymentMethod === 'qris' && (
+                          <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-800/80 p-4 rounded-2xl">
+                            {simulatedQrisUrl && (
+                              <div className="bg-white p-2 rounded-2xl shrink-0 shadow-lg">
+                                <img src={simulatedQrisUrl} alt="QRIS Code" className="w-32 h-32" />
+                              </div>
+                            )}
+                            <div className="text-xs space-y-1.5 text-slate-300">
+                              <p className="font-semibold text-white">Cara Pembayaran QRIS:</p>
+                              <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-400">
+                                <li>Buka GoPay, OVO, ShopeePay, Dana, atau BCA/Mandiri Mobile.</li>
+                                <li>Pilih menu <strong>Scan / Bayar QR</strong>.</li>
+                                <li>Scan QR di samping, periksa nominal {formatRupiah(totals.totalAmount)}, lalu konfirmasi.</li>
+                                <li>Setelah transfer berhasil, klik tombol <strong>"Cek Status Pembayaran (Midtrans)"</strong> di bawah.</li>
+                              </ol>
+                            </div>
+                          </div>
+                        )}
+
+                        {paymentMethod === 'virtual_account' && (
+                          <div className="space-y-3 bg-slate-800/80 p-4 rounded-2xl">
+                            <span className="text-xs text-slate-400 block">Nomor Virtual Account Otomatis:</span>
+                            <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-700">
+                              <span className="text-base font-mono font-extrabold tracking-wider text-emerald-400">
+                                {simulatedVaNumber}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(simulatedVaNumber);
+                                  setCopiedVa(true);
+                                  setTimeout(() => setCopiedVa(false), 2000);
+                                }}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                              >
+                                {copiedVa ? 'Tersalin' : 'Salin Nomor'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Live Check Button & Developer Simulator */}
+                        <div className="space-y-2 pt-2 border-t border-slate-800">
                           <button
                             type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(simulatedVaNumber);
-                              setCopiedVa(true);
-                              setTimeout(() => setCopiedVa(false), 2000);
-                            }}
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            disabled={isCheckingMidtransStatus}
+                            onClick={handleCheckPaymentStatus}
+                            className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                           >
-                            {copiedVa ? 'Tersalin' : 'Salin Nomor'}
+                            <RefreshCw className={`w-4 h-4 ${isCheckingMidtransStatus ? 'animate-spin' : ''}`} />
+                            <span>{isCheckingMidtransStatus ? 'Memeriksa ke Midtrans...' : 'Cek Status Pembayaran (Midtrans)'}</span>
                           </button>
+
+                          <div className="flex items-center justify-between pt-2">
+                            <span className="text-[10px] text-slate-400 italic">
+                              Tiket & QR Code hanya akan terbit setelah pembayaran terdeteksi Lunas.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleSandboxSimulatePaid}
+                              className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer"
+                              title="Khusus pengujian developer tanpa kartu kredit sungguhan"
+                            >
+                              🧪 Simulasi Lunas (Sandbox Test)
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
-
-                    <button
-                      type="button"
-                      disabled={isProcessingPayment}
-                      onClick={handleFinalCheckout}
-                      className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-extrabold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                    >
-                      {isProcessingPayment ? (
-                        <span>Menerbitkan E-Ticket Resmi...</span>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span>Bayar Sekarang (Verifikasi Otomatis & Terbitkan E-Ticket)</span>
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
               )}
@@ -702,50 +1001,36 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {/* OPTION B: PEMBAYARAN MANUAL (TRANSFER BANK & UPLOAD BUKTI) */}
               {paymentType === 'manual' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  {/* Select Destination Bank */}
+                  {/* Select Destination Bank from Master Data */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      1. Pilih Rekening Bank Tujuan Transfer:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTargetBank('bca')}
-                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                          targetBank === 'bca'
-                            ? 'border-blue-600 bg-blue-50 text-blue-800 font-bold ring-2 ring-blue-500/20'
-                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="block text-xs font-extrabold">Bank BCA</span>
-                        <span className="text-[10px] text-slate-500">888-019-2831</span>
-                      </button>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700">
+                        1. Pilih Rekening Bank Tujuan Transfer (Master Data Resmi):
+                      </label>
+                      <span className="text-[10px] text-slate-500">
+                        {activeBankAccounts.length} Rekening Aktif
+                      </span>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setTargetBank('mandiri')}
-                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                          targetBank === 'mandiri'
-                            ? 'border-blue-600 bg-blue-50 text-blue-800 font-bold ring-2 ring-blue-500/20'
-                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="block text-xs font-extrabold">Bank Mandiri</span>
-                        <span className="text-[10px] text-slate-500">137-00-1928</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setTargetBank('bsi')}
-                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                          targetBank === 'bsi'
-                            ? 'border-blue-600 bg-blue-50 text-blue-800 font-bold ring-2 ring-blue-500/20'
-                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="block text-xs font-extrabold">Bank BSI</span>
-                        <span className="text-[10px] text-slate-500">719-283-0012</span>
-                      </button>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {activeBankAccounts.map((bank) => {
+                        const isSelected = selectedBankId === bank.id;
+                        return (
+                          <button
+                            key={bank.id}
+                            type="button"
+                            onClick={() => setSelectedBankId(bank.id)}
+                            className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-50 text-blue-800 font-bold ring-2 ring-blue-500/20'
+                                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="block text-xs font-extrabold truncate">{bank.bankName}</span>
+                            <span className="text-[10px] text-slate-500 block font-mono truncate">{bank.accountNumber}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -760,13 +1045,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                     <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">{bankDestinations[targetBank].name}</span>
+                        <span className="text-[10px] text-slate-400 uppercase block">{selectedBankAccount.bankName} ({selectedBankAccount.bankCode})</span>
                         <span className="font-mono text-base font-extrabold text-white">
-                          {bankDestinations[targetBank].accountNo}
+                          {selectedBankAccount.accountNumber}
                         </span>
                         <span className="text-[11px] text-slate-300 block">
-                          a.n {bankDestinations[targetBank].accountName}
+                          a.n {selectedBankAccount.accountName}
                         </span>
+                        {selectedBankAccount.notes && (
+                          <span className="text-[10px] text-amber-300 block mt-0.5">
+                            * {selectedBankAccount.notes}
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -841,7 +1131,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             />
                             <div>
                               <span className="font-bold text-slate-900 block text-xs">Bukti Transfer Terlampir</span>
-                              <span className="text-[10px] text-emerald-600 font-medium">✓ Siap diverifikasi oleh admin</span>
+                              <span className="text-[10px] text-emerald-600 font-medium">✓ Siap diverifikasi oleh Admin Pusat</span>
                             </div>
                           </div>
                           <button
@@ -877,7 +1167,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         type="text"
                         value={transferNotes}
                         onChange={(e) => setTransferNotes(e.target.value)}
-                        placeholder="Contoh: Transfer lewat M-Banking jam 11:30 WIB"
+                        placeholder="Contoh: Transfer lewat M-Banking jam 11:30 WITA"
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -893,22 +1183,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-[11px] flex items-start gap-2">
                     <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Pengecekan Manual:</strong> Tim admin/kreator akan memeriksa mutasi bank Anda dalam 1x24 jam. E-ticket resmi akan otomatis aktif setelah pembayaran disetujui.
+                      <strong>Verifikasi Manual Admin Pusat:</strong> Bukti transfer akan ditinjau langsung oleh Admin Pusat di Super Admin Dashboard. E-ticket resmi dan QR code check-in akan aktif setelah disetujui.
                     </span>
                   </div>
 
                   <button
                     type="button"
                     disabled={isProcessingPayment}
-                    onClick={handleFinalCheckout}
+                    onClick={handleManualCheckout}
                     className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-extrabold text-sm shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     {isProcessingPayment ? (
-                      <span>Mengirim Bukti Transfer...</span>
+                      <span>Mengirimkan Bukti ke Admin Pusat...</span>
                     ) : (
                       <>
                         <Upload className="w-5 h-5" />
-                        <span>Kirim Bukti Pembayaran & Daftarkan Tiket</span>
+                        <span>Kirim Bukti Pembayaran ke Admin Pusat</span>
                       </>
                     )}
                   </button>

@@ -702,6 +702,35 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
       date: 'Agustus 2026',
     },
   ],
+  manualBankAccounts: [
+    {
+      id: 'bank-bca',
+      bankName: 'Bank BCA',
+      bankCode: 'bca',
+      accountNumber: '888-019-2831',
+      accountName: 'PT CELEBES EVENT DIGITAL',
+      isActive: true,
+      notes: 'Verifikasi via m-BCA, myBCA, atau ATM BCA',
+    },
+    {
+      id: 'bank-mandiri',
+      bankName: 'Bank Mandiri',
+      bankCode: 'mandiri',
+      accountNumber: '137-00-19283-912',
+      accountName: 'CELEBES EVENT INDONESIA',
+      isActive: true,
+      notes: 'Transfer via Livin by Mandiri atau ATM Mandiri',
+    },
+    {
+      id: 'bank-bsi',
+      bankName: 'Bank BSI (Syariah)',
+      bankCode: 'bsi',
+      accountNumber: '719-283-0012',
+      accountName: 'CELEBES EVENT SYARIAH',
+      isActive: true,
+      notes: 'Transfer syariah via BSI Mobile atau ATM Bersama',
+    },
+  ],
 };
 
 export const INITIAL_SUPPORT_TICKETS: SupportTicket[] = [

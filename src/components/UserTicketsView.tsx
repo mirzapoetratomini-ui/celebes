@@ -13,16 +13,21 @@ import {
   Eye,
   FileText,
   AlertCircle,
-  X
+  X,
+  Lock,
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { Order, Ticket, User } from '../types';
 import { formatRupiah } from '../utils/ticketing-logic';
+import { api } from '../services/api';
 
 interface UserTicketsViewProps {
   currentUser: User;
   orders: Order[];
   onOpenTicketInvoice: (order: Order, ticket?: Ticket) => void;
   onExploreEvents: () => void;
+  onRefreshOrders?: () => void;
 }
 
 export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
@@ -30,8 +35,30 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
   orders,
   onOpenTicketInvoice,
   onExploreEvents,
+  onRefreshOrders,
 }) => {
   const [selectedProofOrder, setSelectedProofOrder] = useState<Order | null>(null);
+  const [checkingOrderId, setCheckingOrderId] = useState<string | null>(null);
+  const [statusCheckToast, setStatusCheckToast] = useState<string | null>(null);
+
+  const handleCheckPaymentStatus = async (order: Order) => {
+    setCheckingOrderId(order.id);
+    setStatusCheckToast(null);
+    try {
+      const res = await api.checkMidtransStatus(order.orderNumber);
+      if (res.isPaid) {
+        setStatusCheckToast(`🎉 Pembayaran ${order.orderNumber} LUNAS! E-Ticket telah diaktifkan.`);
+        onRefreshOrders?.();
+      } else {
+        setStatusCheckToast(`ℹ️ Status Midtrans: ${(res.status || 'pending').toUpperCase()}. Pembayaran belum terkonfirmasi lunas.`);
+      }
+    } catch (err: any) {
+      setStatusCheckToast(`⚠️ Gagal memeriksa status: ${err.message || 'Koneksi error'}`);
+    } finally {
+      setCheckingOrderId(null);
+      setTimeout(() => setStatusCheckToast(null), 5000);
+    }
+  };
 
   // Filter user's orders
   const myOrders = orders.filter(
@@ -67,6 +94,14 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
         </button>
       </div>
 
+      {/* Toast Notification */}
+      {statusCheckToast && (
+        <div className="p-4 bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl flex items-center gap-3 text-xs font-semibold shadow-xs animate-in fade-in">
+          <Clock className="w-5 h-5 text-blue-600 shrink-0" />
+          <span>{statusCheckToast}</span>
+        </div>
+      )}
+
       {myOrders.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
@@ -90,6 +125,7 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
         <div className="space-y-4">
           {myOrders.map(order => {
             const isPendingManual = order.paymentStatus === 'pending_manual_verification';
+            const isPendingAuto = order.paymentStatus === 'pending';
             const isPaid = order.paymentStatus === 'paid';
             const isRejected = order.paymentStatus === 'payment_rejected';
 
@@ -111,10 +147,17 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {isPendingAuto && (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse">
+                        <Clock className="w-3 h-3 text-amber-600" />
+                        <span>Menunggu Pembayaran</span>
+                      </span>
+                    )}
+
                     {isPendingManual && (
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse">
                         <Clock className="w-3 h-3 text-amber-600" />
-                        <span>Menunggu Verifikasi Manual</span>
+                        <span>Menunggu Verifikasi Manual Admin</span>
                       </span>
                     )}
 
@@ -130,6 +173,19 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                         <XCircle className="w-3 h-3 text-red-600" />
                         <span>Pembayaran Ditolak</span>
                       </span>
+                    )}
+
+                    {isPendingAuto && (
+                      <button
+                        type="button"
+                        disabled={checkingOrderId === order.id}
+                        onClick={() => handleCheckPaymentStatus(order)}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Cek Status Pembayaran Midtrans"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${checkingOrderId === order.id ? 'animate-spin' : ''}`} />
+                        <span>{checkingOrderId === order.id ? 'Memeriksa...' : 'Cek Status Midtrans'}</span>
+                      </button>
                     )}
 
                     {order.paymentProofUrl && (
@@ -153,18 +209,39 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                       }`}
                     >
                       <Printer className="w-3.5 h-3.5 text-blue-400" />
-                      <span>{isPaid ? 'Buka & Unduh E-Ticket' : 'Lihat Status Tiket'}</span>
+                      <span>{isPaid ? 'Buka & Unduh E-Ticket' : 'Lihat Status / Bayar'}</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Status Notice if Pending or Rejected */}
+                {/* Status Notice if Pending Auto */}
+                {isPendingAuto && (
+                  <div className="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Tagihan sedang aktif via Midtrans (<strong>{order.paymentChannel || 'QRIS / Virtual Account'}</strong>). E-Ticket dan QR Code resmi hanya aktif setelah pembayaran terverifikasi lunas.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={checkingOrderId === order.id}
+                      onClick={() => handleCheckPaymentStatus(order)}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${checkingOrderId === order.id ? 'animate-spin' : ''}`} />
+                      <span>Cek Pembayaran Sekarang</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Status Notice if Pending Manual or Rejected */}
                 {isPendingManual && (
                   <div className="bg-amber-50/80 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                       <span>
-                        Bukti transfer Anda telah dikirim (Bank: <strong>{order.senderBank || 'Transfer Manual'}</strong> a/n <strong>{order.senderAccountName || order.buyerName}</strong>). Tiket resmi & QR code aktif otomatis begitu disetujui oleh panitia.
+                        Bukti transfer Anda telah dikirim (Bank: <strong>{order.senderBank || 'Transfer Manual'}</strong> a/n <strong>{order.senderAccountName || order.buyerName}</strong>). Menunggu verifikasi dari Admin Pusat Celebes Event sebelum tiket diterbitkan.
                       </span>
                     </div>
                   </div>
@@ -174,7 +251,7 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                   <div className="bg-red-50 px-6 py-2.5 border-b border-red-200 text-xs text-red-900 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                     <span>
-                      <strong>Alasan Penolakan:</strong> {order.rejectionReason || 'Nominal tidak sesuai atau mutasi bank belum terverifikasi.'} Silakan hubungi panitia acara.
+                      <strong>Alasan Penolakan:</strong> {order.rejectionReason || 'Nominal tidak sesuai atau mutasi bank belum terverifikasi.'} Silakan hubungi pusat bantuan atau panitia acara.
                     </span>
                   </div>
                 )}
@@ -200,7 +277,7 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                               </span>
                             </div>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
                                 ticket.checkInStatus === 'checked_in'
                                   ? 'bg-amber-100 text-amber-800'
                                   : isPaid
@@ -208,31 +285,38 @@ export const UserTicketsView: React.FC<UserTicketsViewProps> = ({
                                   : 'bg-amber-50 text-amber-700 border border-amber-200'
                               }`}
                             >
-                              {ticket.checkInStatus === 'checked_in'
-                                ? 'Sudah Check-In'
-                                : isPaid
-                                ? 'Aktif (Siap Masuk)'
-                                : 'Menunggu Verifikasi'}
+                              {!isPaid && <Lock className="w-2.5 h-2.5" />}
+                              <span>
+                                {ticket.checkInStatus === 'checked_in'
+                                  ? 'Sudah Check-In'
+                                  : isPaid
+                                  ? 'Aktif (Siap Masuk)'
+                                  : isPendingManual
+                                  ? 'Menunggu Verifikasi Admin'
+                                  : 'Terkunci (Belum Lunas)'}
+                              </span>
                             </span>
                           </div>
 
                           <div className="mt-2 text-xs text-slate-500 font-mono bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-                            <span>KODE: {ticket.ticketCode}</span>
+                            <span>KODE: {isPaid ? ticket.ticketCode : 'LOCKED-UNPAID'}</span>
                             {isPaid ? (
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                             ) : (
-                              <Clock className="w-4 h-4 text-amber-600" />
+                              <Lock className="w-4 h-4 text-amber-600" />
                             )}
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-                          <span className="text-[11px] text-slate-400">Tersedia 4 Template Tiket</span>
+                          <span className="text-[11px] text-slate-400">
+                            {isPaid ? 'Tersedia 4 Template Tiket' : 'Tiket terkunci hingga pembayaran lunas'}
+                          </span>
                           <button
                             onClick={() => onOpenTicketInvoice(order, ticket)}
                             className="font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                           >
-                            <span>Buka Template E-Ticket</span>
+                            <span>{isPaid ? 'Buka Template E-Ticket' : 'Lihat Status & Tagihan'}</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         </div>

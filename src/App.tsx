@@ -823,6 +823,7 @@ export default function App() {
                 setActiveInvoiceTicket(ticket || null);
               }}
               onExploreEvents={() => setActiveTab('browse')}
+              onRefreshOrders={refreshAllData}
             />
           ) : (
             <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 max-w-md mx-auto shadow-sm">
@@ -1226,6 +1227,7 @@ export default function App() {
         event={checkoutEvent}
         selectedTickets={checkoutSelectedTickets}
         currentUser={currentUser || INITIAL_USERS[2]}
+        platformSettings={platformSettings}
         onOrderCompleted={(order) => {
           setCheckoutEvent(null);
           refreshAllData();
